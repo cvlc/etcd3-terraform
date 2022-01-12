@@ -74,8 +74,3 @@ variable "cluster_size" {
   default     = 3
   description = "Number of etcd nodes to launch"
 }
-
-variable "ntp_host" {
-  default     = "0.europe.pool.ntp.org"
-  description = "NTP host to use for time coordination"
-}
