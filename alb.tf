@@ -15,7 +15,7 @@ resource "aws_lb" "internal" {
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.internal.id
   port              = 2379
-  protocol          = "HTTP"
+  protocol          = "HTTPS"
   default_action {
     target_group_arn = aws_lb_target_group.http.arn
     type             = "forward"
@@ -25,7 +25,7 @@ resource "aws_lb_listener" "http" {
 resource "aws_lb_target_group" "http" {
   name     = "${var.role}-internal-${var.environment}-http"
   port     = 2379
-  protocol = "HTTP"
+  protocol = "HTTPS"
   vpc_id   = data.aws_vpc.target.id
   health_check {
     healthy_threshold   = 2

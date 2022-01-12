@@ -24,6 +24,8 @@ Environment="ETCD_AUTO_COMPACTION_MODE=revision"
 Environment="ETCD_NAME=${peer_name}"
 Environment="ETCD_INITIAL_CLUSTER_STATE=new"
 Environment="ETCD_DISCOVERY_SRV=${discovery_domain_name}"
+Environment="ETCD_AUTO_TLS=true"
+Environment="ETCD_PEER_AUTO_TLS=true"
 ExecStart=
 ExecStart=/usr/local/bin/etcd
 Restart=always
