@@ -1,86 +1,31 @@
-resource "aws_vpc" "default" {
-  cidr_block           = "${var.vpc_cidr}"
-  enable_dns_support   = true
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "3.11.2"
+  name = "etcd-test"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+  enable_dns_support = true
   enable_dns_hostnames = true
 
-  tags {
-    Name = "etcd3-test"
+  enable_nat_gateway = true
+  enable_vpn_gateway = true
+  single_nat_gateway = true
+  public_subnet_tags = {
+    Public = "true"
   }
+  tags = {
+    Terraform = "true"
+    Environment = "development"
+  }
+
+  count = var.vpc_id == "create" ? 1 : 0
 }
 
-resource "aws_internet_gateway" "default" {
-  vpc_id = "${aws_vpc.default.id}"
-
-  tags {
-    Name = "default"
-  }
+data "aws_vpc" "target" {
+  id = var.vpc_id == "create" ? module.vpc[0].vpc_id : var.vpc_id
 }
 
-resource "aws_subnet" "default" {
-  count             = "${length(var.azs)}"
-  vpc_id            = "${aws_vpc.default.id}"
-  cidr_block        = "${cidrsubnet(var.vpc_cidr, 2, count.index)}"
-  availability_zone = "${element(var.azs, count.index)}"
-
-  tags {
-    Name = "default"
-  }
-}
-
-resource "aws_default_route_table" "default" {
-  default_route_table_id = "${aws_vpc.default.default_route_table_id}"
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = "${aws_internet_gateway.default.id}"
-  }
-
-  tags {
-    Name = "default"
-  }
-}
-
-resource "aws_default_network_acl" "default" {
-  default_network_acl_id = "${aws_vpc.default.default_network_acl_id}"
-  subnet_ids             = ["${aws_subnet.default.*.id}"]
-
-  egress {
-    protocol   = -1
-    rule_no    = 100
-    action     = "allow"
-    cidr_block = "0.0.0.0/0"
-    from_port  = 0
-    to_port    = 0
-  }
-
-  ingress {
-    protocol   = -1
-    rule_no    = 100
-    action     = "allow"
-    cidr_block = "0.0.0.0/0"
-    from_port  = 0
-    to_port    = 0
-  }
-
-  tags {
-    Name = "default"
-  }
-}
-
-resource "aws_default_security_group" "default" {
-  vpc_id = "${aws_vpc.default.id}"
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}

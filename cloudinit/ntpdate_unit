@@ -1,6 +1,0 @@
-[Service]
-Type=oneshot
-ExecStart=/sbin/ntpdate ${ntp_host}
-
-[Install]
-WantedBy=multi-user.target

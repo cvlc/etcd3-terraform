@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda-cloudwatch-dns-service" {
-  name = "lambda-dns-service.${var.region}.i.${var.environment}.${var.dns["domain_name"]}"
+  name = "lambda-dns-service.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
 
   assume_role_policy = <<EOF
 {
@@ -19,8 +19,8 @@ EOF
 }
 
 resource "aws_iam_role_policy" "lambda-cloudwatch-dns-service" {
-  name = "lambda-cloudwatch-dns-service.${var.region}.i.${var.environment}.${var.dns["domain_name"]}"
-  role = "${aws_iam_role.lambda-cloudwatch-dns-service.name}"
+  name = "lambda-cloudwatch-dns-service.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  role = aws_iam_role.lambda-cloudwatch-dns-service.name
 
   lifecycle {
     create_before_destroy = true
@@ -46,12 +46,12 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda-cloudwatch-dns-service-xray" {
-  role       = "${aws_iam_role.lambda-cloudwatch-dns-service.name}"
+  role       = aws_iam_role.lambda-cloudwatch-dns-service.name
   policy_arn = "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
 }
 
 resource "aws_iam_role_policy_attachment" "lambda-cloudwatch-dns-service-logs" {
-  role       = "${aws_iam_role.lambda-cloudwatch-dns-service.name}"
+  role       = aws_iam_role.lambda-cloudwatch-dns-service.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
@@ -63,25 +63,25 @@ data "archive_file" "lambda-dns-service" {
 
 resource "aws_lambda_function" "cloudwatch-dns-service" {
   filename         = "${path.module}/files/lambda-dns-service.dist.zip"
-  source_code_hash = "${data.archive_file.lambda-dns-service.output_base64sha256}"
+  source_code_hash = data.archive_file.lambda-dns-service.output_base64sha256
   function_name    = "${var.role}-cloudwatch-dns-service-${var.environment}"
-  role             = "${aws_iam_role.lambda-cloudwatch-dns-service.arn}"
+  role             = aws_iam_role.lambda-cloudwatch-dns-service.arn
   handler          = "bundle.handler"
-  runtime          = "nodejs6.10"
+  runtime          = "nodejs14.x"
   timeout          = 10
 
   depends_on = [
-    "data.archive_file.lambda-dns-service",
-    "aws_iam_role_policy_attachment.lambda-cloudwatch-dns-service-xray",
+    data.archive_file.lambda-dns-service,
+    aws_iam_role_policy_attachment.lambda-cloudwatch-dns-service-xray,
   ]
 
-  tracing_config = {
+  tracing_config {
     mode = "Active"
   }
 
   environment {
     variables = {
-      HOSTED_ZONE_ID = "${aws_route53_zone.default.id}"
+      HOSTED_ZONE_ID = aws_route53_zone.default.id
       DOMAIN         = "i.${var.environment}.${var.dns["domain_name"]}"
     }
   }
@@ -89,7 +89,7 @@ resource "aws_lambda_function" "cloudwatch-dns-service" {
 
 resource "aws_cloudwatch_event_rule" "autoscaling" {
   name       = "cloudwatch-dns-autoscaling-${var.environment}"
-  depends_on = ["aws_lambda_function.cloudwatch-dns-service"]
+  depends_on = [aws_lambda_function.cloudwatch-dns-service]
 
   event_pattern = <<PATTERN
 {
@@ -108,18 +108,18 @@ PATTERN
 
 resource "aws_cloudwatch_event_target" "lambda-cloudwatch-dns-service-autoscaling" {
   target_id  = "lambda-cloudwatch-dns-service"
-  rule       = "${aws_cloudwatch_event_rule.autoscaling.name}"
-  arn        = "${aws_lambda_function.cloudwatch-dns-service.arn}"
-  depends_on = ["aws_lambda_function.cloudwatch-dns-service", "aws_cloudwatch_event_rule.autoscaling"]
+  rule       = aws_cloudwatch_event_rule.autoscaling.name
+  arn        = aws_lambda_function.cloudwatch-dns-service.arn
+  depends_on = [aws_lambda_function.cloudwatch-dns-service, aws_cloudwatch_event_rule.autoscaling]
 }
 
 resource "aws_lambda_permission" "cloudwatch-dns-service-autoscaling" {
   statement_id  = "AllowExecutionFromCloudWatchAutoScaling"
   action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.cloudwatch-dns-service.arn}"
+  function_name = aws_lambda_function.cloudwatch-dns-service.arn
   principal     = "events.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_event_rule.autoscaling.arn}"
-  depends_on    = ["aws_lambda_function.cloudwatch-dns-service", "aws_cloudwatch_event_rule.autoscaling"]
+  source_arn    = aws_cloudwatch_event_rule.autoscaling.arn
+  depends_on    = [aws_lambda_function.cloudwatch-dns-service, aws_cloudwatch_event_rule.autoscaling]
 }
 
 resource "aws_cloudwatch_event_rule" "ec2" {
@@ -139,16 +139,16 @@ PATTERN
 
 resource "aws_cloudwatch_event_target" "lambda-cloudwatch-dns-service-ec2" {
   target_id  = "lambda-cloudwatch-dns-service"
-  rule       = "${aws_cloudwatch_event_rule.ec2.name}"
-  arn        = "${aws_lambda_function.cloudwatch-dns-service.arn}"
-  depends_on = ["aws_lambda_function.cloudwatch-dns-service", "aws_cloudwatch_event_rule.ec2"]
+  rule       = aws_cloudwatch_event_rule.ec2.name
+  arn        = aws_lambda_function.cloudwatch-dns-service.arn
+  depends_on = [aws_lambda_function.cloudwatch-dns-service, aws_cloudwatch_event_rule.ec2]
 }
 
 resource "aws_lambda_permission" "cloudwatch-dns-service-ec2" {
   statement_id  = "AllowExecutionFromCloudWatchEC2"
   action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.cloudwatch-dns-service.arn}"
+  function_name = aws_lambda_function.cloudwatch-dns-service.arn
   principal     = "events.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_event_rule.ec2.arn}"
-  depends_on    = ["aws_lambda_function.cloudwatch-dns-service", "aws_cloudwatch_event_rule.ec2"]
+  source_arn    = aws_cloudwatch_event_rule.ec2.arn
+  depends_on    = [aws_lambda_function.cloudwatch-dns-service, aws_cloudwatch_event_rule.ec2]
 }
