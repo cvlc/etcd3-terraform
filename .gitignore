@@ -2,4 +2,5 @@
 /terraform.tfstate
 /terraform.tfstate.*
 /.terraform.tfstate.*
+/terraform.tfvars
 /files/lambda-dns-service.dist.zip

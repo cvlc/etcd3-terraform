@@ -28,7 +28,7 @@ resource "aws_autoscaling_group" "default" {
   health_check_type         = "EC2"
   force_delete              = true
   launch_configuration      = element(aws_launch_configuration.default.*.name, count.index)
-  vpc_zone_identifier       = [element(data.aws_subnets.target.ids, count.index)]
+  vpc_zone_identifier       = [data.aws_subnet.target[count.index].id]
   target_group_arns         = [aws_lb_target_group.http.arn]
   wait_for_capacity_timeout = "0"
   tag {
@@ -63,10 +63,16 @@ resource "aws_autoscaling_group" "default" {
   depends_on = [aws_ebs_volume.ssd]
 }
 
+data "aws_subnet" "target" {
+  count = var.cluster_size
+  vpc_id = data.aws_vpc.target.id
+  id = element(data.aws_subnets.target.ids, count.index)
+}
+
 resource "aws_ebs_volume" "ssd" {
   count             = var.cluster_size
   type              = "gp2"
-  availability_zone = element(data.aws_availability_zones.available.names, count.index)
+  availability_zone = data.aws_subnet.target[count.index].availability_zone
   size              = 100
   encrypted         = true
 
