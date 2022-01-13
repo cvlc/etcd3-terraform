@@ -17,13 +17,18 @@ data "aws_subnets" "target" {
   }
 
   tags = {
-    "Public" = "true"
+    (var.subnet_type) = "true"
   }
 }
 
 variable "vpc_id" {
-  default = "create"
+  default     = "create"
   description = "The VPC ID to use or 'create' to create a new VPC"
+}
+
+variable "subnet_type" {
+  default     = "Private"
+  description = "The type of subnet to deploy to. This translates to a tag on the subnet with a value of true - eg. Private for Private: true or Public for Public: true"
 }
 
 variable "instance_type" {
@@ -52,7 +57,7 @@ variable "ami" {
 }
 
 variable "associate_public_ips" {
-  default     = "true"
+  default     = "false"
   description = "Whether to associate public IPs with etcd instances (suggest false for security)"
 }
 
@@ -74,3 +79,30 @@ variable "cluster_size" {
   default     = 3
   description = "Number of etcd nodes to launch"
 }
+
+variable "client_cidrs" {
+  default     = ["10.0.0.0/8"]
+  description = "CIDRs to allow client access to etcd"
+}
+
+output "ca_cert" {
+  value       = tls_self_signed_cert.ca.cert_pem
+  description = "CA certificate to add to client trust stores (also see ./ca.pem)"
+}
+
+output "client_cert" {
+  value       = tls_locally_signed_cert.client.cert_pem
+  description = "Client certificate to use to authenticate with etcd (also see ./client.pem)"
+}
+
+output "client_key" {
+  value       = tls_private_key.client.private_key_pem
+  description = "Client private key to use to authenticate with etcd (also see ./client.key)"
+  sensitive   = true
+}
+
+output "lb_address" {
+  value       = aws_route53_record.nlb.name
+  description = "Load balancer address for use by clients"
+}
+

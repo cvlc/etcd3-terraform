@@ -28,8 +28,8 @@ resource "aws_autoscaling_group" "default" {
   health_check_type         = "EC2"
   force_delete              = true
   launch_configuration      = element(aws_launch_configuration.default.*.name, count.index)
-  vpc_zone_identifier       = [data.aws_subnet.target[count.index].id]
-  target_group_arns         = [aws_lb_target_group.http.arn]
+  vpc_zone_identifier       = [length(data.aws_subnets.target.ids) > 0 ? data.aws_subnet.target[count.index].id : ""]
+  target_group_arns         = [aws_lb_target_group.https.arn]
   wait_for_capacity_timeout = "0"
   tag {
     key                 = "Name"
@@ -60,26 +60,26 @@ resource "aws_autoscaling_group" "default" {
     value               = aws_route53_zone.default.id
     propagate_at_launch = false
   }
-  depends_on = [aws_ebs_volume.ssd]
+  depends_on = [aws_ebs_volume.ssd, aws_lambda_permission.cloudwatch-dns-service-autoscaling]
 }
 
 data "aws_subnet" "target" {
-  count = var.cluster_size
+  count  = length(data.aws_subnets.target.ids) > 0 ? var.cluster_size : 0
   vpc_id = data.aws_vpc.target.id
-  id = element(data.aws_subnets.target.ids, count.index)
+  id     = element(data.aws_subnets.target.ids, count.index)
 }
 
 resource "aws_ebs_volume" "ssd" {
-  count             = var.cluster_size
+  count             = length(data.aws_subnets.target.ids) > 0 ? var.cluster_size : 0
   type              = "gp2"
   availability_zone = data.aws_subnet.target[count.index].availability_zone
   size              = 100
   encrypted         = true
 
   tags = {
-    Name        = "peer-${count.index}-ssd.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
-    environment = var.environment
-    role        = "peer-${count.index}-ssd.${var.role}"
+    Name         = "peer-${count.index}-ssd.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+    environment  = var.environment
+    role         = "peer-${count.index}-ssd.${var.role}"
     "snap-daily" = "true"
   }
 }

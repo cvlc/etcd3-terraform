@@ -3,11 +3,12 @@ resource "aws_route53_zone" "default" {
   vpc {
     vpc_id = data.aws_vpc.target.id
   }
+  force_destroy = true
 }
 
-resource "aws_route53_record" "default" {
+resource "aws_route53_record" "defaultclient" {
   zone_id = aws_route53_zone.default.id
-  name    = "_etcd-server._tcp.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  name    = "_etcd-client-ssl._tcp.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
   type    = "SRV"
   ttl     = "1"
   records = formatlist("0 0 2380 %s", aws_route53_record.peers.*.name)

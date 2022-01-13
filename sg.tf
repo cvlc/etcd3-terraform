@@ -17,7 +17,6 @@ resource "aws_security_group" "default" {
     self      = true
   }
 
-  # etcd client traffic from ALB
   egress {
     from_port = 2379
     to_port   = 2380
@@ -25,17 +24,32 @@ resource "aws_security_group" "default" {
     self      = true
   }
 
-  # etcd client traffic from the VPC
+  # clients
   ingress {
     from_port   = 2379
-    to_port     = 2380
+    to_port     = 2379
     protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.target.cidr_block]
+    cidr_blocks = var.client_cidrs
   }
 
+  # plain http healthcheck and metrics from lb & to/from peers
+  ingress {
+    from_port = 8080
+    to_port   = 8080
+    protocol  = "tcp"
+    self      = true
+  }
   egress {
-    from_port   = 2379
-    to_port     = 2380
+    from_port = 8080
+    to_port   = 8080
+    protocol  = "tcp"
+    self      = true
+  }
+
+  # plain http healthcheck and metrics from the VPC
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
     protocol    = "tcp"
     cidr_blocks = [data.aws_vpc.target.cidr_block]
   }

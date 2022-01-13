@@ -1,6 +1,6 @@
 resource "aws_iam_role" "dlm_lifecycle_role" {
   name = "dlm-lifecycle-role"
- 
+
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -16,11 +16,11 @@ resource "aws_iam_role" "dlm_lifecycle_role" {
 }
 EOF
 }
- 
+
 resource "aws_iam_role_policy" "dlm_lifecycle" {
   name = "dlm-snapshot-lifecycle-policy"
-  role = "${aws_iam_role.dlm_lifecycle_role.id}"
- 
+  role = aws_iam_role.dlm_lifecycle_role.id
+
   policy = <<EOF
 {
    "Version": "2012-10-17",
@@ -46,35 +46,35 @@ resource "aws_iam_role_policy" "dlm_lifecycle" {
 }
 EOF
 }
- 
+
 resource "aws_dlm_lifecycle_policy" "automatic_snapshots" {
   description        = "DLM snapshot lifecycle policy"
   execution_role_arn = aws_iam_role.dlm_lifecycle_role.arn
   state              = "ENABLED"
- 
+
   policy_details {
     resource_types = ["VOLUME"]
- 
+
     schedule {
       name = "week of daily snapshots"
- 
+
       create_rule {
         interval      = 24
         interval_unit = "HOURS"
         times         = ["02:15"]
       }
- 
+
       retain_rule {
         count = 7
       }
- 
+
       tags_to_add = {
         SnapshotCreator = "DLM"
       }
- 
+
       copy_tags = true
     }
- 
+
     target_tags = {
       "snap-daily" = "true"
     }

@@ -1,3 +1,6 @@
+/ca.pem
+/client.pem
+/client.key
 /.terraform
 /terraform.tfstate
 /terraform.tfstate.*
