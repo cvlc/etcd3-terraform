@@ -15,8 +15,7 @@ resource "aws_iam_role" "default" {
       "Principal": {
         "Service": "ec2.amazonaws.com"
       },
-      "Effect": "Allow",
-      "Sid": ""
+      "Effect": "Allow"
     }
   ]
 }
@@ -48,18 +47,24 @@ resource "aws_iam_role_policy" "default" {
         "ec2:DescribeAddresses",
         "ec2:DescribeInstances",
         "ec2:DescribeVolumes",
-        "ec2:DescribeVolumeStatus",
-        "ec2:AttachVolume",
-        "ec2:DetachVolume"
+        "ec2:DescribeVolumeStatus"
       ],
       "Resource": "*"
     },
     {
       "Effect": "Allow",
       "Action": [
-        "s3:GetObject"
+        "ec2:AttachVolume",
+        "ec2:DetachVolume"
       ],
-      "Resource": "${aws_s3_bucket.files.arn}/*"
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "ec2:ResourceTag/cluster": "${var.role}",
+          "ec2:ResourceTag/environment": "${var.environment}",
+          "ec2:Region": "${data.aws_region.current.name}"
+        }
+      }
     }
   ]
 }

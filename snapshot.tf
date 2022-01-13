@@ -30,17 +30,22 @@ resource "aws_iam_role_policy" "dlm_lifecycle" {
          "Action": [
             "ec2:CreateSnapshot",
             "ec2:DeleteSnapshot",
-            "ec2:DescribeVolumes",
-            "ec2:DescribeSnapshots"
+            "ec2:CreateTags"
          ],
-         "Resource": "*"
+         "Resource": "arn:aws:ec2:*::snapshot/*",
+         "Condition": {
+            "ForAnyValue:StringEquals": {
+                "ec2:ParentVolume": ${jsonencode(aws_ebs_volume.ssd.*.arn)}
+           }
+         }
       },
       {
          "Effect": "Allow",
          "Action": [
-            "ec2:CreateTags"
+            "ec2:DescribeVolumes",
+            "ec2:DescribeSnapshots"
          ],
-         "Resource": "arn:aws:ec2:*::snapshot/*"
+         "Resource": "*"
       }
    ]
 }

@@ -28,7 +28,7 @@ resource "aws_autoscaling_group" "default" {
   health_check_type         = "EC2"
   force_delete              = true
   launch_configuration      = element(aws_launch_configuration.default.*.name, count.index)
-  vpc_zone_identifier       = [length(data.aws_subnets.target.ids) > 0 ? data.aws_subnet.target[count.index].id : ""]
+  vpc_zone_identifier       = [data.aws_subnet.target[count.index].id]
   target_group_arns         = [aws_lb_target_group.https.arn]
   wait_for_capacity_timeout = "0"
   tag {
@@ -50,6 +50,12 @@ resource "aws_autoscaling_group" "default" {
   }
 
   tag {
+    key                 = "cluster"
+    value               = var.role
+    propagate_at_launch = true
+  }
+
+  tag {
     key                 = "r53-domain-name"
     value               = "${var.environment}.${var.dns["domain_name"]}"
     propagate_at_launch = false
@@ -64,22 +70,23 @@ resource "aws_autoscaling_group" "default" {
 }
 
 data "aws_subnet" "target" {
-  count  = length(data.aws_subnets.target.ids) > 0 ? var.cluster_size : 0
+  count  = var.cluster_size
   vpc_id = data.aws_vpc.target.id
   id     = element(data.aws_subnets.target.ids, count.index)
 }
 
 resource "aws_ebs_volume" "ssd" {
-  count             = length(data.aws_subnets.target.ids) > 0 ? var.cluster_size : 0
-  type              = "gp2"
+  count             = var.cluster_size
+  snapshot_id       = lookup(var.restore_snapshot_ids, (count.index), "")
   availability_zone = data.aws_subnet.target[count.index].availability_zone
-  size              = 100
+  size              = var.ssd_size
   encrypted         = true
 
   tags = {
     Name         = "peer-${count.index}-ssd.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
     environment  = var.environment
     role         = "peer-${count.index}-ssd.${var.role}"
+    cluster      = var.role
     "snap-daily" = "true"
   }
 }

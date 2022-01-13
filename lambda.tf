@@ -34,11 +34,17 @@ resource "aws_iam_role_policy" "lambda-cloudwatch-dns-service" {
       "Effect": "Allow",
       "Action": [
         "ec2:DescribeInstances",
-        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:DescribeAutoScalingGroups"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
         "route53:ChangeResourceRecordSets",
         "route53:ListResourceRecordSets"
       ],
-      "Resource": "*"
+      "Resource": "${aws_route53_zone.default.arn}"
     }
   ]
 }

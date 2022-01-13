@@ -4,7 +4,7 @@
 useradd -U -M -s /dev/null etcd
 
 mkdir -p /etc/ssl/etcd; chown -R etcd:etcd /etc/ssl/etcd; chmod -R 700 /etc/ssl/etcd
-curl -L -o /tmp/etcd-v${etcd_version}-linux-amd64.tar.gz https://github.com/etcd-io/etcd/releases/download/v${etcd_version}/etcd-v${etcd_version}-linux-amd64.tar.gz
+curl -L -o /tmp/etcd-v${etcd_version}-linux-amd64.tar.gz ${etcd_url}
 
 tar xvf /tmp/etcd-v${etcd_version}-linux-amd64.tar.gz -C /tmp
 
