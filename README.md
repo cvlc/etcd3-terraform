@@ -29,7 +29,7 @@ In this distribution, we've:
 
 This makes for a secure base configuration. 
 
-It is suggested that this is deployed to private subnets only within a VPC (`subnet_type` to `Private` after tagging private subnets as `Private=true`) and that the `associate_public_ips` variable is kept to false. With `vpc_id=create` this will create a new, appropriately-tagged private VPC. This is the default behaviour.
+It is suggested that this is deployed to private subnets only within a VPC, this is done by setting `subnet_tag_key` and `subnet_tag_value` to match, eg. `Private: true` after tagging your private subnets. With `vpc_id=create` this will create a new, appropriately-tagged private VPC. This is the default behaviour.
 
 ### Authentication
 The etcd nodes authenticate with each other via individual TLS certificates and keys. Clients authenticate using a single certificate. Role Based Access Control [is possible with further configuration via etcd itself](https://etcd.io/docs/v3.5/op-guide/authentication/rbac/).
