@@ -16,7 +16,7 @@ data "template_file" "cloud-init" {
     peer_key_file                = tls_private_key.peer[count.index].private_key_pem
     server_cert_file             = tls_locally_signed_cert.server[count.index].cert_pem
     server_key_file              = tls_private_key.server[count.index].private_key_pem
-    maintenance_day_of_the_month = ceil((count.index + 1) * (27 / var.cluster_size))
+    maintenance_day_of_the_month = count.index < 26 ? count.index + 1 : count.index - 25
   }
 }
 
