@@ -29,7 +29,9 @@ In this distribution, we've:
 
 This makes for a secure base configuration. 
 
-It is suggested that this is deployed to private subnets only within a VPC, this is done by setting `subnet_tag_key` and `subnet_tag_value` to match, eg. `Private: true` after tagging your private subnets. With `vpc_id=create` this will create a new, appropriately-tagged private VPC. This is the default behaviour.
+It is suggested that this is deployed to private subnets only within a VPC, this is done by setting `subnet_tag_key` and `subnet_tag_value` to match, eg. `Private: true`. This value will need to be changed or the tags added if you plan to bootstrap in an existing VPC.
+
+To deploy into an existing VPC, simply set `vpc_id` to the target VPC's ID - by default we set `vpc_id=create` to create a new, appropriately-tagged private VPC.
 
 ### Authentication
 The etcd nodes authenticate with each other via individual TLS certificates and keys. Clients authenticate using a single certificate. Role Based Access Control [is possible with further configuration via etcd itself](https://etcd.io/docs/v3.5/op-guide/authentication/rbac/).
