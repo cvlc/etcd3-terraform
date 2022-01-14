@@ -11,15 +11,11 @@ module "vpc" {
   enable_dns_support   = true
   enable_dns_hostnames = true
 
-  enable_nat_gateway = true
-  enable_vpn_gateway = true
-  single_nat_gateway = true
-  public_subnet_tags = {
-    Public = "true"
-  }
-  private_subnet_tags = {
-    Private = "true"
-  }
+  enable_nat_gateway  = true
+  enable_vpn_gateway  = true
+  single_nat_gateway  = true
+  public_subnet_tags  = merge({ Public = "true" }, var.public_subnet_tags)
+  private_subnet_tags = merge({ Private = "true" }, var.private_subnet_tags)
   tags = {
     Terraform   = "true"
     Environment = "development"

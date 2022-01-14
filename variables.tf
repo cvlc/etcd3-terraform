@@ -32,6 +32,16 @@ variable "subnet_type" {
   description = "The type of subnet to deploy to. This translates to a tag on the subnet with a value of true - eg. Private for Private: true or Public for Public: true"
 }
 
+variable "public_subnet_tags" {
+  default     = {}
+  description = "Additional tags to apply to public subnets"
+}
+
+variable "private_subnet_tags" {
+  default     = {}
+  description = "Additional tags to apply to private subnets"
+}
+
 variable "instance_type" {
   default     = "c5a.large"
   description = "AWS instance type, at least c5a.large is recommended. etcd suggest m4.large."
@@ -150,11 +160,11 @@ output "lb_address" {
 }
 
 output "vpc_id" {
-    value       = data.aws_vpc.target.id
-    description = "VPC ID"
+  value       = data.aws_vpc.target.id
+  description = "VPC ID"
 }
 
 output "subnet_ids" {
-    value       = data.aws_subnets.target.ids
-    description = "Subnet IDs"
+  value       = data.aws_subnets.target.ids
+  description = "Subnet IDs"
 }

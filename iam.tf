@@ -59,7 +59,7 @@ resource "aws_iam_role_policy" "default" {
       ],
       "Resource": "*",
       "Condition": {
-        "StringEquals": {
+        "ForAllValues:StringEquals": {
           "ec2:ResourceTag/cluster": "${var.role}",
           "ec2:ResourceTag/environment": "${var.environment}",
           "ec2:Region": "${data.aws_region.current.name}"

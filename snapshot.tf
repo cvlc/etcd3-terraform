@@ -32,12 +32,14 @@ resource "aws_iam_role_policy" "dlm_lifecycle" {
             "ec2:DeleteSnapshot",
             "ec2:CreateTags"
          ],
-         "Resource": "arn:aws:ec2:*::snapshot/*",
+         "Resource": "*",
          "Condition": {
-            "ForAnyValue:StringEquals": {
-                "ec2:ParentVolume": ${jsonencode(aws_ebs_volume.ssd.*.arn)}
-           }
-         }
+         "ForAllValues:StringEquals": {
+            "ec2:ResourceTag/cluster": "${var.role}",
+            "ec2:ResourceTag/environment": "${var.environment}",
+            "ec2:Region": "${data.aws_region.current.name}"
+          }
+        }
       },
       {
          "Effect": "Allow",
