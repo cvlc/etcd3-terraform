@@ -11,10 +11,10 @@ This will also create a local Route 53 zone for the domain you pick and bind it 
 A Network Load Balancer will be created for clients of the etcd cluster. It wraps all of the auto-scaling group instances on port `2379` with a health check to ensure that only functional instances are presented.
 
 ### High Availability
-As mentioned above, the default size of the cluster is 3 nodes - in a highly available environment, this means that only 2 node failures will trigger a catastrophic cluster failure. In order to prevent this, it's suggested to use a larger cluster in any real-world scenario - 5, 7 or 9 nodes should be sufficient depending on risk appetite.
+As mentioned above, the default size of the cluster is 3 nodes - this means that only 2 node failures will trigger a catastrophic cluster failure. In order to prevent this, it's suggested to use a larger cluster in any real-world scenario - 5, 7 or 9 nodes should be sufficient depending on risk appetite.
 
 ### Elasticity
-Scaling out is as easy as increasing the size of the cluster via the aforementioned variable. When scaling down/in, it is suggested to destroy the extreneous instances and autoscaling groups manually via `terraform destroy -target=...` after removing the member from the cluster using `etcdctl` before running another `terraform apply`. Future work could implement lifecycle hooks and autoscaling to make this more automated.
+Scaling out is as easy as increasing the size of the cluster via the aforementioned variable. When scaling down/in, destroy the extreneous instances and autoscaling groups manually via `terraform destroy -target=...` after removing the member from the cluster using `etcdctl` before running another `terraform apply`. Future work could implement lifecycle hooks and autoscaling to make this more automated.
 
 ### Backups
 Volume snapshots are taken automatically of each node, every day at 2am. A week of snapshots is retained for each node. In order to restore from snapshot, take down the cluster and manually replace each EBS volume. Use `terraform import` to import the new volumes into the state to reconcile from the Terraform end. 

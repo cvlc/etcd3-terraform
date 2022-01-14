@@ -14,7 +14,7 @@ resource "aws_launch_configuration" "default" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = [vpc_classic_link_security_groups]
+    ignore_changes        = [vpc_classic_link_security_groups, user_data]
   }
 }
 
