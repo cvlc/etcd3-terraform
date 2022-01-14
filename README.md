@@ -85,7 +85,7 @@ module "etcd3-terraform" {
 
 ### Example (new vpc, 'airgapped' environment)
 
-Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata service from the instance in order to attach the volumes. 
+Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata and API services from the instance in order to attach the volumes. 
 
 ```
 module "etcd3-terraform" {
