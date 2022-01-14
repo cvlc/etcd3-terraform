@@ -121,6 +121,8 @@ etcd is configured with a 100GB data disk per node on Amazon EBS SSDs by default
 
 For further details of what these values and settings mean, refer to [etcd's official documentation](https://etcd.io/docs/v3.5/op-guide/maintenance/).
 
+When conducting upgrades, be aware that changes to the `cloud-init` configuration do not trigger re-creation of the nodes - this is a conscious decision taken to avoid inadvertedly destroying quorum during an update. Make any necessary changes then use `terraform destroy -target=...` and `terraform apply -target=...` on each ASG/launch-group individually to roll them in series without destroying quorum, checking each time that the new node has rejoined the cluster before deleting the old one. 
+
 ## How to run etcdctl 🔧
 We presume that whatever system you choose to run these commands on can connect to the NLB (ie. if you're using a private subnet, your client machine is within the VPC or connected via a VPN).
 
