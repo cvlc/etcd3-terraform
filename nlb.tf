@@ -2,7 +2,7 @@ resource "aws_lb" "nlb" {
   name               = "${var.role}-${var.environment}"
   load_balancer_type = "network"
   subnets            = data.aws_subnets.target.ids
-  internal           = var.subnet_type == "Public" ? false : true
+  internal           = var.nlb_internal
 
   tags = {
     Name        = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"

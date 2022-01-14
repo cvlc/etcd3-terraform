@@ -43,6 +43,71 @@ The client certificate must be used to authenticate with the server when communi
 
 The file `variables.tf` declares the Terraform variables required to run this stack. Almost everything has a default - the region will be detected from the `AWS_REGION` environment variable and it will span across the maximum available zones within your preferred region. You will be asked to provide an SSH public key to launch the stack. Variables can all be overridden in a `terraform.tfvars` file or by passing runtime parameters.
 
+
+### Example (minimal for development env, creates a VPC and all resources in a private subnet)
+```
+module "etcd3-terraform" {
+  source = "github.com/cvlc/etcd3-terraform"
+  key_pair_public_key = "ssh-rsa..."
+  ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
+  dns = { "domain_name": "mycompany.local" }
+  
+  ssd_size = 32
+  instance_type = "t3.medium"
+}
+
+```
+
+### Example (existing vpc running kops for stage env)
+This example uses the tag "kubernetes.io/role/internal-elb: 1" to identify the private subnets to deploy to.
+
+```
+module "etcd3-terraform" {
+  source = "github.com/cvlc/etcd3-terraform"
+  key_pair_public_key = "ssh-rsa..."
+  ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
+  dns = { "domain_name": "mycompany.local" }
+  
+  ssd_size = 512
+  cluster_size = 5
+  instance_type = "c5a.large"
+  
+  role = "etcds"
+  environment = "stage"
+
+  vpc_id = "vpc-abcdef1234"
+  subnet_tag_key = "kubernetes.io/role/internal-elb"
+  subnet_tag_value = "1"
+}
+```
+
+### Example (new vpc, 'airgapped' environment)
+
+Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata service from the instance in order to attach the volumes. 
+
+```
+module "etcd3-terraform" {
+  source = "github.com/cvlc/etcd3-terraform"
+  key_pair_public_key = "ssh-rsa..."
+  ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
+  dns = { "domain_name": "mycompany.local" }
+
+  client_cirs = ["10.3.0.0/16"] # k8s cluster
+  
+  ssd_size = 1024
+  cluster_size = 9
+  instance_type = c5a.4xlarge
+
+  role = "etcd0"
+  environment = "performance"
+  
+  allow_download_from_cidrs = ["10.2.3.5/32"] # HTTP server for files
+  create_s3_bucket = "false"
+  etcd3_bootstrap_binary_url = "http://10.2.3.5/etcd3_bootstrap"
+  etcd_url = "http://10.2.3.5/etcd-v3.5.1.tgz"
+}
+```
+
 Note that if you are creating a VPC with `vpc_id=create` you may need to initialize it first, before the rest of this module. To do so, simply:
 ```
 terraform apply -target=module.vpc
@@ -63,9 +128,9 @@ You're now ready to test etcdctl functionality - replace `$insert_nlb_address` w
 
 ```
 $ ETCDCTL_API=3 ETCDCTL_CERT=client.pem ETCDCTL_KEY=client.key ETCDCTL_ENDPOINTS="https://$insert_nlb_address:2379" etcdctl member list
-25f97d08c726ed1, started, peer-2, https://peer-2.ondat.eu-west-2.i.development.mycompany.local:2380, https://peer-2.ondat.eu-west-2.i.development.mycompany.local:2379, false
-326a6d27c048c8ea, started, peer-1, https://peer-1.ondat.eu-west-2.i.development.mycompany.local:2380, https://peer-1.ondat.eu-west-2.i.development.mycompany.local:2379, false
-38308ae09ffc8b32, started, peer-0, https://peer-0.ondat.eu-west-2.i.development.mycompany.local:2380, https://peer-0.ondat.eu-west-2.i.development.mycompany.local:2379, false
+25f97d08c726ed1, started, peer-2, https://peer-2.etcd.eu-west-2.i.development.mycompany.local:2380, https://peer-2.ondat.eu-west-2.i.development.mycompany.local:2379, false
+326a6d27c048c8ea, started, peer-1, https://peer-1.etcd.eu-west-2.i.development.mycompany.local:2380, https://peer-1.ondat.eu-west-2.i.development.mycompany.local:2379, false
+38308ae09ffc8b32, started, peer-0, https://peer-0.etcd.eu-west-2.i.development.mycompany.local:2380, https://peer-0.ondat.eu-west-2.i.development.mycompany.local:2379, false
 ```
 ## How to (synthetically) [benchmark](https://etcd.io/docs/v3.5/op-guide/performance/) etcd in your environment 📊
 
@@ -453,13 +518,15 @@ No requirements.
 | <a name="input_etcd_version"></a> [etcd\_version](#input\_etcd\_version) | etcd version to install | `string` | `"3.5.1"` | no |
 | <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | AWS instance type, at least c5a.large is recommended. etcd suggest m4.large. | `string` | `"c5a.large"` | no |
 | <a name="input_key_pair_public_key"></a> [key\_pair\_public\_key](#input\_key\_pair\_public\_key) | Public key for SSH access | `any` | n/a | yes |
+| <a name="input_nlb_internal"></a> [nlb\_internal](#input\_nlb\_internal) | 'true' to expose the NLB internally only, 'false' to expose it to the internet | `bool` | `true` | no |
 | <a name="input_private_subnet_tags"></a> [private\_subnet\_tags](#input\_private\_subnet\_tags) | Additional tags to apply to private subnets | `map` | `{}` | no |
 | <a name="input_public_subnet_tags"></a> [public\_subnet\_tags](#input\_public\_subnet\_tags) | Additional tags to apply to public subnets | `map` | `{}` | no |
 | <a name="input_restore_snapshot_ids"></a> [restore\_snapshot\_ids](#input\_restore\_snapshot\_ids) | Map of of the snapshots to use to restore etcd data storage - eg. {0: "snap-abcdef", 1: "snap-fedcba", 2: "snap-012345"} | `map(string)` | `{}` | no |
-| <a name="input_role"></a> [role](#input\_role) | Role name used for internal logic | `string` | `"ondat"` | no |
+| <a name="input_role"></a> [role](#input\_role) | Role name used for internal logic | `string` | `"etcd"` | no |
 | <a name="input_ssd_size"></a> [ssd\_size](#input\_ssd\_size) | Size (in GB) of the SSD to be used for etcd data storage | `string` | `"100"` | no |
 | <a name="input_ssh_cidrs"></a> [ssh\_cidrs](#input\_ssh\_cidrs) | CIDRs to allow SSH access to the nodes from (by default, none) | `list` | `[]` | no |
-| <a name="input_subnet_type"></a> [subnet\_type](#input\_subnet\_type) | The type of subnet to deploy to. This translates to a tag on the subnet with a value of true - eg. Private for Private: true or Public for Public: true | `string` | `"Private"` | no |
+| <a name="input_subnet_tag_key"></a> [subnet\_tag\_key](#input\_subnet\_tag\_key) | The value of the key in the tag on the subnet to deploy to. By default, we use 'Private' as key to label a private subnet | `string` | `"Private"` | no |
+| <a name="input_subnet_tag_value"></a> [subnet\_tag\_value](#input\_subnet\_tag\_value) | The value to search for in the subnet tag from subnet\_tag\_key. By default, this is 'true' with a key of 'Private' | `string` | `"true"` | no |
 | <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | The VPC ID to use or 'create' to create a new VPC | `string` | `"create"` | no |
 
 ### Outputs

@@ -17,7 +17,7 @@ data "aws_subnets" "target" {
   }
 
   tags = {
-    (var.subnet_type) = "true"
+    (var.subnet_tag_key) = (var.subnet_tag_value)
   }
   depends_on = [data.aws_vpc.target]
 }
@@ -27,9 +27,19 @@ variable "vpc_id" {
   description = "The VPC ID to use or 'create' to create a new VPC"
 }
 
-variable "subnet_type" {
+variable "subnet_tag_key" {
   default     = "Private"
-  description = "The type of subnet to deploy to. This translates to a tag on the subnet with a value of true - eg. Private for Private: true or Public for Public: true"
+  description = "The value of the key in the tag on the subnet to deploy to. By default, we use 'Private' as key to label a private subnet"
+}
+
+variable "subnet_tag_value" {
+  default     = "true"
+  description = "The value to search for in the subnet tag from subnet_tag_key. By default, this is 'true' with a key of 'Private'"
+}
+
+variable "nlb_internal" {
+  default     = true
+  description = "'true' to expose the NLB internally only, 'false' to expose it to the internet"
 }
 
 variable "public_subnet_tags" {
@@ -64,7 +74,7 @@ variable "environment" {
 }
 
 variable "role" {
-  default     = "ondat"
+  default     = "etcd"
   description = "Role name used for internal logic"
 }
 
