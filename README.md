@@ -103,10 +103,10 @@ module "etcd3-terraform" {
   role = "etcd0"
   environment = "performance"
   
-  allow_download_from_cidrs = ["10.2.3.5/32"] # HTTP server for files
+  allow_download_from_cidrs = ["10.2.3.5/32"] # HTTPS server for file (certificate must be valid and verifiable) 
   create_s3_bucket = "false"
-  etcd3_bootstrap_binary_url = "http://10.2.3.5/etcd3_bootstrap"
-  etcd_url = "http://10.2.3.5/etcd-v3.5.1.tgz"
+  etcd3_bootstrap_binary_url = "https://10.2.3.5/etcd3_bootstrap"
+  etcd_url = "https://10.2.3.5/etcd-v3.5.1.tgz"
 }
 ```
 
