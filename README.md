@@ -27,15 +27,7 @@ In this distribution, we've:
 - ensured that all AWS policies that enable writing to resources are constrained to acting on the resources created by this module
 - used a modern, stable default AMI (Debian 10)
 
-This makes for a secure base configuration. That said, there are some adjustments that could be made:
-
-enable offline mode for air-gapped environments by:
-- remove the dependency on S3 and the outbound security group rule for port 443 that is necessary for it
-- remove the dependency on GitHub for etcd releases for the same
-
-other possible improvements are:
-- adjust the cloudinit script to remove dependency on debian/ubuntu base images (update-ca-certificates)
-- reduce AWS permissions to a further minimum in included policies (currently 'read' access is broad)
+This makes for a secure base configuration. 
 
 It is suggested that this is deployed to private subnets only within a VPC (`subnet_type` to `Private` after tagging private subnets as `Private=true`) and that the `associate_public_ips` variable is kept to false. With `vpc_id=create` this will create a new, appropriately-tagged private VPC. This is the default behaviour.
 
