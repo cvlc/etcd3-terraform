@@ -461,6 +461,8 @@ No requirements.
 | <a name="input_etcd_version"></a> [etcd\_version](#input\_etcd\_version) | etcd version to install | `string` | `"3.5.1"` | no |
 | <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | AWS instance type, at least c5a.large is recommended. etcd suggest m4.large. | `string` | `"c5a.large"` | no |
 | <a name="input_key_pair_public_key"></a> [key\_pair\_public\_key](#input\_key\_pair\_public\_key) | Public key for SSH access | `any` | n/a | yes |
+| <a name="input_private_subnet_tags"></a> [private\_subnet\_tags](#input\_private\_subnet\_tags) | Additional tags to apply to private subnets | `map` | `{}` | no |
+| <a name="input_public_subnet_tags"></a> [public\_subnet\_tags](#input\_public\_subnet\_tags) | Additional tags to apply to public subnets | `map` | `{}` | no |
 | <a name="input_restore_snapshot_ids"></a> [restore\_snapshot\_ids](#input\_restore\_snapshot\_ids) | Map of of the snapshots to use to restore etcd data storage - eg. {0: "snap-abcdef", 1: "snap-fedcba", 2: "snap-012345"} | `map(string)` | `{}` | no |
 | <a name="input_role"></a> [role](#input\_role) | Role name used for internal logic | `string` | `"ondat"` | no |
 | <a name="input_ssd_size"></a> [ssd\_size](#input\_ssd\_size) | Size (in GB) of the SSD to be used for etcd data storage | `string` | `"100"` | no |
@@ -476,3 +478,5 @@ No requirements.
 | <a name="output_client_cert"></a> [client\_cert](#output\_client\_cert) | Client certificate to use to authenticate with etcd (also see ./client.pem) |
 | <a name="output_client_key"></a> [client\_key](#output\_client\_key) | Client private key to use to authenticate with etcd (also see ./client.key) |
 | <a name="output_lb_address"></a> [lb\_address](#output\_lb\_address) | Load balancer address for use by clients |
+| <a name="output_subnet_ids"></a> [subnet\_ids](#output\_subnet\_ids) | Subnet IDs |
+| <a name="output_vpc_id"></a> [vpc\_id](#output\_vpc\_id) | VPC ID |
