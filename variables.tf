@@ -149,3 +149,12 @@ output "lb_address" {
   description = "Load balancer address for use by clients"
 }
 
+output "vpc_id" {
+    value       = data.aws_vpc.target.id
+    description = "VPC ID"
+}
+
+output "subnet_ids" {
+    value       = data.aws_subnets.target.ids
+    description = "Subnet IDs"
+}
