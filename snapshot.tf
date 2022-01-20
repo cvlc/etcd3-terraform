@@ -1,5 +1,5 @@
 resource "aws_iam_role" "dlm_lifecycle_role" {
-  name = "dlm-lifecycle-role"
+  name = "dlm-lifecycle-role-${var.environment}"
 
   assume_role_policy = <<EOF
 {
@@ -18,7 +18,7 @@ EOF
 }
 
 resource "aws_iam_role_policy" "dlm_lifecycle" {
-  name = "dlm-snapshot-lifecycle-policy"
+  name = "dlm-snapshot-lifecycle-policy-${var.environment}"
   role = aws_iam_role.dlm_lifecycle_role.id
 
   policy = <<EOF
