@@ -9,7 +9,31 @@ resource "aws_launch_configuration" "default" {
   enable_monitoring           = false
   associate_public_ip_address = var.associate_public_ips
   security_groups             = [aws_security_group.default.id]
-  user_data                   = element(data.template_file.cloud-init.*.rendered, count.index)
+  user_data = templatefile("${path.module}/cloudinit/userdata-template.sh", {
+    environment  = var.environment,
+    role         = var.role,
+    region       = data.aws_region.current.name,
+    etcd_version = var.etcd_version,
+    etcd_url     = local.etcd_url,
+
+    etcd_member_unit = templatefile("${path.module}/cloudinit/etcd_member_unit", {
+      peer_name             = "peer-${count.index}"
+      discovery_domain_name = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+      cluster_name          = var.role
+    }),
+    etcd_bootstrap_unit = templatefile("${path.module}/cloudinit/etcd_bootstrap_unit", {
+      region                     = data.aws_region.current.name
+      peer_name                  = "peer-${count.index}"
+      discovery_domain_name      = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+      etcd3_bootstrap_binary_url = local.etcd3_bootstrap_binary_url
+    }),
+    ca_file                      = tls_self_signed_cert.ca.cert_pem,
+    peer_cert_file               = tls_locally_signed_cert.peer[count.index].cert_pem,
+    peer_key_file                = tls_private_key.peer[count.index].private_key_pem,
+    server_cert_file             = tls_locally_signed_cert.server[count.index].cert_pem,
+    server_key_file              = tls_private_key.server[count.index].private_key_pem,
+    maintenance_day_of_the_month = count.index < 26 ? count.index + 1 : count.index - 25
+  })
   root_block_device { encrypted = true }
 
   lifecycle {

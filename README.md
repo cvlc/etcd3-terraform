@@ -110,6 +110,7 @@ module "etcd3-terraform" {
 }
 ```
 
+### Troubleshooting
 Note that if you are creating a VPC with `vpc_id=create` you may need to initialize it first, before the rest of this module. To do so, simply:
 ```
 terraform apply -target=module.vpc
@@ -435,7 +436,6 @@ No requirements.
 | <a name="provider_archive"></a> [archive](#provider\_archive) | 2.2.0 |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 3.71.0 |
 | <a name="provider_local"></a> [local](#provider\_local) | 2.1.0 |
-| <a name="provider_template"></a> [template](#provider\_template) | 2.2.0 |
 | <a name="provider_tls"></a> [tls](#provider\_tls) | 3.1.0 |
 
 ### Modules
@@ -501,9 +501,6 @@ No requirements.
 | [aws_subnet.target](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnet) | data source |
 | [aws_subnets.target](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnets) | data source |
 | [aws_vpc.target](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/vpc) | data source |
-| [template_file.cloud-init](https://registry.terraform.io/providers/hashicorp/template/latest/docs/data-sources/file) | data source |
-| [template_file.etcd_bootstrap_unit](https://registry.terraform.io/providers/hashicorp/template/latest/docs/data-sources/file) | data source |
-| [template_file.etcd_member_unit](https://registry.terraform.io/providers/hashicorp/template/latest/docs/data-sources/file) | data source |
 
 ### Inputs
 
@@ -543,3 +540,5 @@ No requirements.
 | <a name="output_lb_address"></a> [lb\_address](#output\_lb\_address) | Load balancer address for use by clients |
 | <a name="output_subnet_ids"></a> [subnet\_ids](#output\_subnet\_ids) | Subnet IDs |
 | <a name="output_vpc_id"></a> [vpc\_id](#output\_vpc\_id) | VPC ID |
+
+
