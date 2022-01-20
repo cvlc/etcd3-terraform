@@ -109,6 +109,27 @@ module "etcd3-terraform" {
   etcd_url = "https://10.2.3.5/etcd-v3.5.1.tgz"
 }
 ```
+### Next Steps
+To retrieve the client credentials and LB address, refer to the outputs of the module:
+```
+export VPC_ID=$(terraform show -json | jq -r '.values.outputs.vpc_id.value'); echo $VPC_ID
+export SUBNET_IDS=$(terraform show -json | jq -r '.values.outputs.subnet_ids.value|join(",")'); echo $SUBNET_IDS
+export ETCD_LB="$(terraform show -json | jq -r '.values.outputs.lb_address.value')"; echo $ETCD_LB
+```
+
+The certificates are automatically created in the your working Terraform directory as `ca.pem`, `client.pem` and `client.key` but if you don't have access to the filesystem you can extract them from the state:
+
+```
+terraform show -json | jq -r '.values.outputs.ca_cert.value' > ca.pem
+terraform show -json | jq -r '.values.outputs.client_cert.value' > client.pem
+terraform show -json | jq -r '.values.outputs.client_key.value' > client.key
+```
+
+From here, we can copy all the files and variables to a host within the VPC and test the LB with curl:
+
+```
+curl -v --cert client.crt --key client.key --cacert ca.crt https://$ETCD_LB:2379 
+```
 
 ### Troubleshooting
 Note that if you are creating a VPC with `vpc_id=create` you may need to initialize it first, before the rest of this module. To do so, simply:
