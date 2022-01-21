@@ -43,10 +43,10 @@ The client certificate must be used to authenticate with the server when communi
 
 ## How to configure and deploy 🕹
 
-The file `variables.tf` declares the Terraform variables required to run this stack. Almost everything has a default - the region will be detected from the `AWS_REGION` environment variable and it will span across the maximum available zones within your preferred region. You will be asked to provide an SSH public key to launch the stack. Variables can all be overridden in a `terraform.tfvars` file or by passing runtime parameters.
+The file `variables.tf` declares the Terraform variables required to run this stack. Almost everything has a default - the region will be detected from the `AWS_REGION` environment variable and it will span across the maximum available zones within your preferred region. You will be asked to provide an SSH public key to launch the stack. Variables can all be overridden in a `terraform.tfvars` file or by passing runtime parameters. By default we use a Debian 10 AMI for `eu-west-2`, be sure to change this if you are using a different region! 
 
 
-### Example (minimal for development env, creates a VPC and all resources in a private subnet)
+### Example (minimal for development env, creates a VPC and all resources in us-east-1)
 ```
 module "etcd3-terraform" {
   source = "github.com/cvlc/etcd3-terraform"
@@ -54,13 +54,14 @@ module "etcd3-terraform" {
   ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
   dns = { "domain_name": "mycompany.local" }
   
+  ami = "ami-031283ff8a43b021c" # Debian 10
   ssd_size = 32
   instance_type = "t3.medium"
 }
 
 ```
 
-### Example (existing vpc running kops for stage env)
+### Example (existing vpc running kops for stage env, eu-west-2)
 This example uses the tag "kubernetes.io/role/internal-elb: 1" to identify the private subnets to deploy to.
 
 ```
@@ -83,7 +84,7 @@ module "etcd3-terraform" {
 }
 ```
 
-### Example (new vpc, 'airgapped' environment)
+### Example (new vpc, 'airgapped' environment, eu-west-2)
 
 Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata and API services from the instance in order to attach the volumes. 
 
