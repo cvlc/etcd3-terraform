@@ -138,6 +138,9 @@ Note that if you are creating a VPC with `vpc_id=create` you may need to initial
 terraform apply -target=module.vpc
 terraform apply
 ```
+This module requires a private DNS zone. If you use custom DNS servers on your VPC, there are two options - either delegate the etcd subdomain to your VPC from your subdomain or implement [Route53 Resolver](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver.html) to intercept queries for the internal domain and forward requests for it to your VPC DNS servers. 
+
+This module requires outbound internet access in it's default configuration to retrieve etcd binaries and the etcd3-bootstrap utility from S3. The sources for these tools are configurable via variables outlined in the examples - we can provide an https endpoint to retrieve them from in an internal environment. 
 
 ### Maintenance
 etcd is configured with a 100GB data disk per node on Amazon EBS SSDs by default (configurable via `ssd_size` variable), a `revision` auto compaction mode and a retention of `20000`. An automatic cronjob runs on each node to ensure defragmentation happens at least once every month, this briefly blocks reads/writes on a single node at a time from 3:05am on a different day of the month for each node. It's configured with a backend space quota of `8589934592` bytes. 
