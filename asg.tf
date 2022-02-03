@@ -96,7 +96,7 @@ resource "aws_autoscaling_group" "default" {
 data "aws_subnet" "target" {
   count  = var.cluster_size
   vpc_id = data.aws_vpc.target.id
-  id     = element(data.aws_subnets.target.ids, count.index)
+  id     = element(var.subnet_ids, count.index)
 }
 
 resource "aws_ebs_volume" "ssd" {
