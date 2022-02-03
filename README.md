@@ -54,7 +54,6 @@ module "etcd3-terraform" {
   ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
   dns = { "domain_name": "mycompany.local" }
   
-  ami = "ami-031283ff8a43b021c" # Debian 10
   ssd_size = 32
   instance_type = "t3.medium"
 }
@@ -108,6 +107,7 @@ module "etcd3-terraform" {
   create_s3_bucket = "false"
   etcd3_bootstrap_binary_url = "https://10.2.3.5/etcd3_bootstrap"
   etcd_url = "https://10.2.3.5/etcd-v3.5.1.tgz"
+  ami = "ami-031283ff8a43b021c" # Debian 10
 }
 ```
 ### Next Steps
@@ -521,6 +521,7 @@ No requirements.
 | [tls_private_key.server](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key) | resource |
 | [tls_self_signed_cert.ca](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/self_signed_cert) | resource |
 | [archive_file.lambda-dns-service](https://registry.terraform.io/providers/hashicorp/archive/latest/docs/data-sources/file) | data source |
+| [aws_ami.ami](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 | [aws_subnet.target](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnet) | data source |
@@ -532,7 +533,9 @@ No requirements.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_allow_download_from_cidrs"></a> [allow\_download\_from\_cidrs](#input\_allow\_download\_from\_cidrs) | CIDRs from which to allow downloading etcd and etcd-bootstrap binaries via TLS (443 outbound). By default, this is totally open as S3 and GitHub IP addresses are unpredictable. | `list` | <pre>[<br>  "0.0.0.0/0"<br>]</pre> | no |
-| <a name="input_ami"></a> [ami](#input\_ami) | AMI to launch with - suggest Debian | `string` | `"ami-050949f5d3aede071"` | no |
+| <a name="input_ami"></a> [ami](#input\_ami) | AMI to launch with - if set, overrides the value found via ami\_name\_regex and ami\_owner | `string` | `""` | no |
+| <a name="input_ami_name_regex"></a> [ami\_name\_regex](#input\_ami\_name\_regex) | Regex to match the preferred AMI name | `string` | `"ubuntu/images/hvm-ssd/ubuntu-.*-amd64-server-*"` | no |
+| <a name="input_ami_owner"></a> [ami\_owner](#input\_ami\_owner) | AMI owner ID | `string` | `"099720109477"` | no |
 | <a name="input_associate_public_ips"></a> [associate\_public\_ips](#input\_associate\_public\_ips) | Whether to associate public IPs with etcd instances (suggest false for security) | `string` | `"false"` | no |
 | <a name="input_client_cidrs"></a> [client\_cidrs](#input\_client\_cidrs) | CIDRs to allow client access to etcd | `list` | <pre>[<br>  "10.0.0.0/8"<br>]</pre> | no |
 | <a name="input_cluster_size"></a> [cluster\_size](#input\_cluster\_size) | Number of etcd nodes to launch | `number` | `3` | no |
@@ -565,5 +568,4 @@ No requirements.
 | <a name="output_lb_address"></a> [lb\_address](#output\_lb\_address) | Load balancer address for use by clients |
 | <a name="output_subnet_ids"></a> [subnet\_ids](#output\_subnet\_ids) | Subnet IDs |
 | <a name="output_vpc_id"></a> [vpc\_id](#output\_vpc\_id) | VPC ID |
-
 
