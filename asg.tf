@@ -1,7 +1,7 @@
 resource "aws_launch_configuration" "default" {
   count                       = var.cluster_size
   name_prefix                 = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}-"
-  image_id                    = var.ami
+  image_id                    = var.ami != "" ? var.ami : data.aws_ami.ami.id
   instance_type               = var.instance_type
   ebs_optimized               = true
   iam_instance_profile        = aws_iam_instance_profile.default.id

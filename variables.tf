@@ -101,8 +101,18 @@ locals {
 }
 
 variable "ami" {
-  default     = "ami-050949f5d3aede071"
-  description = "AMI to launch with - suggest Debian"
+  default     = ""
+  description = "AMI to launch with - if set, overrides the value found via ami_name_regex and ami_owner"
+}
+
+variable "ami_name_regex" {
+  default     = "ubuntu/images/hvm-ssd/ubuntu-.*-amd64-server-*"
+  description = "Regex to match the preferred AMI name"
+}
+
+variable "ami_owner" {
+  default     = "099720109477" # Canonical
+  description = "AMI owner ID"
 }
 
 variable "create_s3_bucket" {
