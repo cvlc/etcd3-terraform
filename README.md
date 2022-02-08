@@ -4,7 +4,7 @@ A terraform recipe, forked from Monzo's [etcd3-terraform](https://github.com/mon
 
 ## Stack 🎮
 
-This will create a new VPC and a set of 3 Auto Scaling Groups each running Debian stable by default. These ASGs are distributed over 3 Availability Zones detected from the current region in use (eg. passed via `AWS_REGION` environment variable). All resources are deployed into a VPC that can either be created by setting the `vpc_id` variable to `create` or chosen by setting `vpc_id` to the ID of an existing VPC. 
+This will create a set of 3 Auto Scaling Group controlled EC2 instances each running the latest Ubuntu image by default. These ASGs are distributed over 3 Availability Zones detected from the current region in use (eg. passed via `AWS_REGION` environment variable). All resources are deployed into a VPC selected by setting `vpc_id`.  
 
 This will also create a local Route 53 zone for the domain you pick and bind it to the VPC so its records can be resolved. This domain does not need to be registered. An `SRV` record suitable for etcd discovery is also created as well as a Lambda function which monitors ASG events and creates `A` records for each member of the cluster.
 
@@ -29,9 +29,7 @@ In this distribution, we've:
 
 This makes for a secure base configuration. 
 
-It is suggested that this is deployed to private subnets only within a VPC, this is done by setting `subnet_tag_key` and `subnet_tag_value` to match, eg. `Private: true`. This value will need to be changed or the tags added if you plan to bootstrap in an existing VPC.
-
-To deploy into an existing VPC, simply set `vpc_id` to the target VPC's ID - by default we set `vpc_id=create` to create a new, appropriately-tagged private VPC.
+It is suggested that this is deployed to private subnets only, targeted via the parameter `subnet_ids`. 
 
 ### Authentication
 The etcd nodes authenticate with each other via individual TLS certificates and keys. Clients authenticate using a single certificate. Role Based Access Control [is possible with further configuration via etcd itself](https://etcd.io/docs/v3.5/op-guide/authentication/rbac/).
@@ -43,7 +41,7 @@ The client certificate must be used to authenticate with the server when communi
 
 ## How to configure and deploy 🕹
 
-The file `variables.tf` declares the Terraform variables required to run this stack. Almost everything has a default - the region will be detected from the `AWS_REGION` environment variable and it will span across the maximum available zones within your preferred region. You will be asked to provide an SSH public key to launch the stack. Variables can all be overridden in a `terraform.tfvars` file or by passing runtime parameters. By default we use a Debian 10 AMI for `eu-west-2`, be sure to change this if you are using a different region! 
+The file `variables.tf` declares the Terraform variables required to run this stack. Almost everything has a default - the region will be detected from the `AWS_REGION` environment variable and it will span across the maximum available zones within your preferred region. You will be asked to provide a VPC ID, subnet IDs and an SSH public key to launch the stack. Variables can all be overridden in a `terraform.tfvars` file or by passing runtime parameters. By default we use the latest Ubuntu AMI, be sure to change this if you are using a different region! 
 
 
 ### Example (minimal for development env, creates a VPC and all resources in us-east-1)
@@ -54,37 +52,39 @@ module "etcd3-terraform" {
   ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
   dns = { "domain_name": "mycompany.local" }
   
-  ami = "ami-031283ff8a43b021c" # Debian 10
+  vpc_id = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+
   ssd_size = 32
   instance_type = "t3.medium"
 }
 
-```
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "3.11.2"
+  name    = "${var.role}-${var.environment}"
+  cidr    = "10.0.0.0/16"
 
-### Example (existing vpc running kops for stage env, eu-west-2)
-This example uses the tag "kubernetes.io/role/internal-elb: 1" to identify the private subnets to deploy to.
+  azs             = data.aws_availability_zones.available.zone_ids
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
-```
-module "etcd3-terraform" {
-  source = "github.com/cvlc/etcd3-terraform"
-  key_pair_public_key = "ssh-rsa..."
-  ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
-  dns = { "domain_name": "mycompany.local" }
-  
-  ssd_size = 512
-  cluster_size = 5
-  instance_type = "c5a.large"
-  
-  role = "etcds"
-  environment = "stage"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 
-  vpc_id = "vpc-abcdef1234"
-  subnet_tag_key = "kubernetes.io/role/internal-elb"
-  subnet_tag_value = "1"
+  enable_nat_gateway  = true
+  enable_vpn_gateway  = true
+  single_nat_gateway  = true
+  public_subnet_tags  = merge({ Public = "true" }, var.public_subnet_tags)
+  private_subnet_tags = merge({ Private = "true" }, var.private_subnet_tags)
+  tags = {
+    Terraform   = "true"
+    Environment = var.environment
+  }
 }
 ```
 
-### Example (new vpc, 'airgapped' environment, eu-west-2)
+### Example ('airgapped' environment, eu-west-2)
 
 Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata and API services from the instance in order to attach the volumes. 
 
@@ -101,6 +101,9 @@ module "etcd3-terraform" {
   cluster_size = 9
   instance_type = c5a.4xlarge
 
+  vpc_id = "vpc-abcdef"
+  subnet_ids = [ "subnet-abcdef", "subnet-fedcba", "subnet-cdbeaf" ]
+
   role = "etcd0"
   environment = "performance"
   
@@ -108,13 +111,12 @@ module "etcd3-terraform" {
   create_s3_bucket = "false"
   etcd3_bootstrap_binary_url = "https://10.2.3.5/etcd3_bootstrap"
   etcd_url = "https://10.2.3.5/etcd-v3.5.1.tgz"
+  ami = "ami-031283ff8a43b021c" # Debian 10
 }
 ```
 ### Next Steps
-To retrieve the client credentials and LB address, refer to the outputs of the module:
+To retrieve the LB address, refer to the outputs of the module:
 ```
-export VPC_ID=$(terraform show -json | jq -r '.values.outputs.vpc_id.value'); echo $VPC_ID
-export SUBNET_IDS=$(terraform show -json | jq -r '.values.outputs.subnet_ids.value|join(",")'); echo $SUBNET_IDS
 export ETCD_LB="$(terraform show -json | jq -r '.values.outputs.lb_address.value')"; echo $ETCD_LB
 ```
 
@@ -465,9 +467,7 @@ No requirements.
 
 ### Modules
 
-| Name | Source | Version |
-|------|--------|---------|
-| <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | 3.11.2 |
+No modules.
 
 ### Resources
 
@@ -521,10 +521,10 @@ No requirements.
 | [tls_private_key.server](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key) | resource |
 | [tls_self_signed_cert.ca](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/self_signed_cert) | resource |
 | [archive_file.lambda-dns-service](https://registry.terraform.io/providers/hashicorp/archive/latest/docs/data-sources/file) | data source |
+| [aws_ami.ami](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 | [aws_subnet.target](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnet) | data source |
-| [aws_subnets.target](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnets) | data source |
 | [aws_vpc.target](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/vpc) | data source |
 
 ### Inputs
@@ -532,7 +532,9 @@ No requirements.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_allow_download_from_cidrs"></a> [allow\_download\_from\_cidrs](#input\_allow\_download\_from\_cidrs) | CIDRs from which to allow downloading etcd and etcd-bootstrap binaries via TLS (443 outbound). By default, this is totally open as S3 and GitHub IP addresses are unpredictable. | `list` | <pre>[<br>  "0.0.0.0/0"<br>]</pre> | no |
-| <a name="input_ami"></a> [ami](#input\_ami) | AMI to launch with - suggest Debian | `string` | `"ami-050949f5d3aede071"` | no |
+| <a name="input_ami"></a> [ami](#input\_ami) | AMI to launch with - if set, overrides the value found via ami\_name\_regex and ami\_owner | `string` | `""` | no |
+| <a name="input_ami_name_regex"></a> [ami\_name\_regex](#input\_ami\_name\_regex) | Regex to match the preferred AMI name | `string` | `"ubuntu/images/hvm-ssd/ubuntu-.*-amd64-server-*"` | no |
+| <a name="input_ami_owner"></a> [ami\_owner](#input\_ami\_owner) | AMI owner ID | `string` | `"099720109477"` | no |
 | <a name="input_associate_public_ips"></a> [associate\_public\_ips](#input\_associate\_public\_ips) | Whether to associate public IPs with etcd instances (suggest false for security) | `string` | `"false"` | no |
 | <a name="input_client_cidrs"></a> [client\_cidrs](#input\_client\_cidrs) | CIDRs to allow client access to etcd | `list` | <pre>[<br>  "10.0.0.0/8"<br>]</pre> | no |
 | <a name="input_cluster_size"></a> [cluster\_size](#input\_cluster\_size) | Number of etcd nodes to launch | `number` | `3` | no |
@@ -545,15 +547,12 @@ No requirements.
 | <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | AWS instance type, at least c5a.large is recommended. etcd suggest m4.large. | `string` | `"c5a.large"` | no |
 | <a name="input_key_pair_public_key"></a> [key\_pair\_public\_key](#input\_key\_pair\_public\_key) | Public key for SSH access | `any` | n/a | yes |
 | <a name="input_nlb_internal"></a> [nlb\_internal](#input\_nlb\_internal) | 'true' to expose the NLB internally only, 'false' to expose it to the internet | `bool` | `true` | no |
-| <a name="input_private_subnet_tags"></a> [private\_subnet\_tags](#input\_private\_subnet\_tags) | Additional tags to apply to private subnets | `map` | `{}` | no |
-| <a name="input_public_subnet_tags"></a> [public\_subnet\_tags](#input\_public\_subnet\_tags) | Additional tags to apply to public subnets | `map` | `{}` | no |
 | <a name="input_restore_snapshot_ids"></a> [restore\_snapshot\_ids](#input\_restore\_snapshot\_ids) | Map of of the snapshots to use to restore etcd data storage - eg. {0: "snap-abcdef", 1: "snap-fedcba", 2: "snap-012345"} | `map(string)` | `{}` | no |
 | <a name="input_role"></a> [role](#input\_role) | Role name used for internal logic | `string` | `"etcd"` | no |
 | <a name="input_ssd_size"></a> [ssd\_size](#input\_ssd\_size) | Size (in GB) of the SSD to be used for etcd data storage | `string` | `"100"` | no |
 | <a name="input_ssh_cidrs"></a> [ssh\_cidrs](#input\_ssh\_cidrs) | CIDRs to allow SSH access to the nodes from (by default, none) | `list` | `[]` | no |
-| <a name="input_subnet_tag_key"></a> [subnet\_tag\_key](#input\_subnet\_tag\_key) | The value of the key in the tag on the subnet to deploy to. By default, we use 'Private' as key to label a private subnet | `string` | `"Private"` | no |
-| <a name="input_subnet_tag_value"></a> [subnet\_tag\_value](#input\_subnet\_tag\_value) | The value to search for in the subnet tag from subnet\_tag\_key. By default, this is 'true' with a key of 'Private' | `string` | `"true"` | no |
-| <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | The VPC ID to use or 'create' to create a new VPC | `string` | `"create"` | no |
+| <a name="input_subnet_ids"></a> [subnet\_ids](#input\_subnet\_ids) | The subnet IDs to which to deploy etcd | `any` | n/a | yes |
+| <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | The VPC ID to use | `any` | n/a | yes |
 
 ### Outputs
 
@@ -563,7 +562,4 @@ No requirements.
 | <a name="output_client_cert"></a> [client\_cert](#output\_client\_cert) | Client certificate to use to authenticate with etcd (also see ./client.pem) |
 | <a name="output_client_key"></a> [client\_key](#output\_client\_key) | Client private key to use to authenticate with etcd (also see ./client.key) |
 | <a name="output_lb_address"></a> [lb\_address](#output\_lb\_address) | Load balancer address for use by clients |
-| <a name="output_subnet_ids"></a> [subnet\_ids](#output\_subnet\_ids) | Subnet IDs |
-| <a name="output_vpc_id"></a> [vpc\_id](#output\_vpc\_id) | VPC ID |
-
 

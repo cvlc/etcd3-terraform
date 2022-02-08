@@ -1,7 +1,7 @@
 resource "aws_lb" "nlb" {
   name               = "${var.role}-${var.environment}"
   load_balancer_type = "network"
-  subnets            = data.aws_subnets.target.ids
+  subnets            = var.subnet_ids
   internal           = var.nlb_internal
 
   tags = {

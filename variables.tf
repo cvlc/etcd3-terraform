@@ -10,48 +10,22 @@ data "aws_availability_zones" "available" {
   }
 }
 
-data "aws_subnets" "target" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.target.id]
-  }
-
-  tags = {
-    (var.subnet_tag_key) = (var.subnet_tag_value)
-  }
-  depends_on = [data.aws_vpc.target]
+data "aws_vpc" "target" {
+  id = var.vpc_id
 }
 
 variable "vpc_id" {
-  default     = "create"
-  description = "The VPC ID to use or 'create' to create a new VPC"
+  description = "The VPC ID to use"
 }
 
-variable "subnet_tag_key" {
-  default     = "Private"
-  description = "The value of the key in the tag on the subnet to deploy to. By default, we use 'Private' as key to label a private subnet"
-}
-
-variable "subnet_tag_value" {
-  default     = "true"
-  description = "The value to search for in the subnet tag from subnet_tag_key. By default, this is 'true' with a key of 'Private'"
+variable "subnet_ids" {
+  description = "The subnet IDs to which to deploy etcd"
 }
 
 variable "nlb_internal" {
   default     = true
   description = "'true' to expose the NLB internally only, 'false' to expose it to the internet"
 }
-
-variable "public_subnet_tags" {
-  default     = {}
-  description = "Additional tags to apply to public subnets"
-}
-
-variable "private_subnet_tags" {
-  default     = {}
-  description = "Additional tags to apply to private subnets"
-}
-
 variable "instance_type" {
   default     = "c5a.large"
   description = "AWS instance type, at least c5a.large is recommended. etcd suggest m4.large."
@@ -101,8 +75,18 @@ locals {
 }
 
 variable "ami" {
-  default     = "ami-050949f5d3aede071"
-  description = "AMI to launch with - suggest Debian"
+  default     = ""
+  description = "AMI to launch with - if set, overrides the value found via ami_name_regex and ami_owner"
+}
+
+variable "ami_name_regex" {
+  default     = "ubuntu/images/hvm-ssd/ubuntu-.*-amd64-server-*"
+  description = "Regex to match the preferred AMI name"
+}
+
+variable "ami_owner" {
+  default     = "099720109477" # Canonical
+  description = "AMI owner ID"
 }
 
 variable "create_s3_bucket" {
@@ -167,14 +151,4 @@ output "client_key" {
 output "lb_address" {
   value       = aws_route53_record.nlb.name
   description = "Load balancer address for use by clients"
-}
-
-output "vpc_id" {
-  value       = data.aws_vpc.target.id
-  description = "VPC ID"
-}
-
-output "subnet_ids" {
-  value       = data.aws_subnets.target.ids
-  description = "Subnet IDs"
 }
