@@ -24,8 +24,8 @@ resource "aws_s3_bucket_object" "etcd3-bootstrap-linux-amd64" {
   count        = var.create_s3_bucket == "true" ? 1 : 0
   bucket       = aws_s3_bucket.files[count.index].id
   key          = "etcd3-bootstrap-linux-amd64"
-  source       = "files/etcd3-bootstrap-linux-amd64"
-  source_hash  = filemd5("files/etcd3-bootstrap-linux-amd64")
+  source       = "${path.module}/files/etcd3-bootstrap-linux-amd64"
+  source_hash  = filemd5("${path.module}/files/etcd3-bootstrap-linux-amd64")
   acl          = "public-read"
   content_type = "application/octet-stream"
 }
