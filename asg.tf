@@ -9,7 +9,7 @@ resource "aws_launch_configuration" "default" {
   enable_monitoring           = false
   associate_public_ip_address = var.associate_public_ips
   security_groups             = [aws_security_group.default.id]
-  user_data = templatefile("${path.module}/cloudinit/userdata-template.sh", {
+  user_data = join("\n", [module.asg-attached-ebs[count.index].userdata_snippet, templatefile("${path.module}/cloudinit/userdata-template.sh", {
     environment  = var.environment,
     role         = var.role,
     region       = data.aws_region.current.name,
@@ -21,19 +21,13 @@ resource "aws_launch_configuration" "default" {
       discovery_domain_name = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
       cluster_name          = var.role
     }),
-    etcd_bootstrap_unit = templatefile("${path.module}/cloudinit/etcd_bootstrap_unit", {
-      region                     = data.aws_region.current.name
-      peer_name                  = "peer-${count.index}"
-      discovery_domain_name      = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
-      etcd3_bootstrap_binary_url = local.etcd3_bootstrap_binary_url
-    }),
     ca_file                      = tls_self_signed_cert.ca.cert_pem,
     peer_cert_file               = tls_locally_signed_cert.peer[count.index].cert_pem,
     peer_key_file                = tls_private_key.peer[count.index].private_key_pem,
     server_cert_file             = tls_locally_signed_cert.server[count.index].cert_pem,
     server_key_file              = tls_private_key.server[count.index].private_key_pem,
     maintenance_day_of_the_month = count.index < 26 ? count.index + 1 : count.index - 25
-  })
+  })])
   root_block_device { encrypted = true }
 
   lifecycle {
@@ -90,7 +84,7 @@ resource "aws_autoscaling_group" "default" {
     value               = aws_route53_zone.default.id
     propagate_at_launch = false
   }
-  depends_on = [aws_ebs_volume.ssd, aws_lambda_permission.cloudwatch-dns-service-autoscaling]
+  depends_on = [aws_lambda_permission.cloudwatch-dns-service-autoscaling]
 }
 
 data "aws_subnet" "target" {
@@ -99,18 +93,25 @@ data "aws_subnet" "target" {
   id     = element(var.subnet_ids, count.index)
 }
 
-resource "aws_ebs_volume" "ssd" {
+module "asg-attached-ebs" {
   count             = var.cluster_size
-  snapshot_id       = lookup(var.restore_snapshot_ids, (count.index), "")
-  availability_zone = data.aws_subnet.target[count.index].availability_zone
-  size              = var.ssd_size
-  encrypted         = true
-
-  tags = {
-    Name         = "peer-${count.index}-ssd.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
-    environment  = var.environment
-    role         = "peer-${count.index}-ssd.${var.role}"
-    cluster      = var.role
-    "snap-daily" = "true"
+  source            = "./modules/asg_attached_ebs"
+  asg_name          = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  availability_zone = element(data.aws_subnet.target.*.availability_zone, count.index)
+  attached_ebs = {
+    "data-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}" = {
+      size                    = var.ssd_size
+      encrypted               = true
+      volume_type             = "gp3"
+      block_device_aws        = "/dev/xvda1"
+      block_device_os         = "/dev/nvme0n1"
+      block_device_mount_path = "/var/lib/etcd"
+      tags = {
+        Name        = "peer-${count.index}-ssd.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+        environment = var.environment
+        role        = "peer-${count.index}-ssd.${var.role}"
+        cluster     = var.role
+      }
+    }
   }
 }

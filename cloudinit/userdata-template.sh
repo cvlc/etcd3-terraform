@@ -13,11 +13,6 @@ mv /tmp/etcd-v${etcd_version}-linux-amd64/{etcd,etcdctl,etcdutl} /usr/local/bin
 mkdir -p /var/lib/etcd/
 mkdir -p /etc/etcd
 
-## Create systemd units
-cat << EOT > /etc/systemd/system/etcd-bootstrap.service
-${etcd_bootstrap_unit} 
-EOT
-
 cat << EOT > /etc/systemd/system/etcd-member.service
 ${etcd_member_unit}
 EOT
@@ -60,8 +55,5 @@ chmod 755 /usr/local/share/ca-certificates/my-ca.crt
 update-ca-certificates
 
 ## Enable and start services
-systemctl enable etcd-bootstrap.service
 systemctl enable etcd-member.service
-
-systemctl start etcd-bootstrap.service
 systemctl start etcd-member.service

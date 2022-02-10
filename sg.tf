@@ -62,7 +62,7 @@ resource "aws_security_group" "default" {
     cidr_blocks = var.ssh_cidrs
   }
 
-  # https outbound (for s3 and metadata access) 
+  # https outbound (for github and metadata access) 
   egress {
     from_port   = 443
     to_port     = 443

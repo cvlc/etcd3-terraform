@@ -120,7 +120,7 @@ To retrieve the LB address, refer to the outputs of the module:
 export ETCD_LB="$(terraform show -json | jq -r '.values.outputs.lb_address.value')"; echo $ETCD_LB
 ```
 
-The certificates are automatically created in the your working Terraform directory as `ca.pem`, `client.pem` and `client.key` but if you don't have access to the filesystem you can extract them from the state:
+You can extract the certificates from the state:
 
 ```
 terraform show -json | jq -r '.values.outputs.ca_cert.value' > ca.pem

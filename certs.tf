@@ -26,12 +26,6 @@ resource "tls_self_signed_cert" "ca" {
   ]
 }
 
-resource "local_file" "ca-cert" {
-  content         = tls_self_signed_cert.ca.cert_pem
-  filename        = "./ca.pem"
-  file_permission = "0700"
-}
-
 resource "tls_private_key" "peer" {
   algorithm   = "ECDSA"
   ecdsa_curve = "P384"
@@ -100,18 +94,6 @@ resource "tls_locally_signed_cert" "server" {
     "server_auth",
     "client_auth"
   ]
-}
-
-resource "local_file" "client-cert" {
-  content         = tls_locally_signed_cert.client.cert_pem
-  filename        = "./client.pem"
-  file_permission = "0700"
-}
-
-resource "local_file" "client-key" {
-  content         = tls_private_key.client.private_key_pem
-  filename        = "./client.key"
-  file_permission = "0700"
 }
 
 resource "tls_private_key" "client" {

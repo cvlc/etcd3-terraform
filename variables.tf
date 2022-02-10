@@ -1,5 +1,3 @@
-provider "aws" {}
-
 data "aws_region" "current" {}
 
 data "aws_availability_zones" "available" {
@@ -68,8 +66,6 @@ variable "etcd3_bootstrap_binary_url" {
 }
 
 locals {
-  etcd3_bootstrap_binary_s3  = "https://${length(aws_s3_bucket.files) > 0 ? aws_s3_bucket.files[0].bucket_domain_name : ""}/etcd3-bootstrap-linux-amd64"
-  etcd3_bootstrap_binary_url = var.etcd3_bootstrap_binary_url == null ? local.etcd3_bootstrap_binary_s3 : var.etcd3_bootstrap_binary_url
   etcd_url_github            = "https://github.com/etcd-io/etcd/releases/download/v${var.etcd_version}/etcd-v${var.etcd_version}-linux-amd64.tar.gz"
   etcd_url                   = var.etcd_url == null ? local.etcd_url_github : var.etcd_url
 }
@@ -87,11 +83,6 @@ variable "ami_name_regex" {
 variable "ami_owner" {
   default     = "099720109477" # Canonical
   description = "AMI owner ID"
-}
-
-variable "create_s3_bucket" {
-  default     = "true"
-  description = "Whether to create the S3 bucket used by default for instances to obtain the etcd3-bootstrap binary through cloud-init"
 }
 
 variable "associate_public_ips" {
