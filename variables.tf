@@ -96,17 +96,14 @@ variable "allow_download_from_cidrs" {
 }
 
 variable "dns" {
-  type = map(string)
-
-  default = {
-    domain_name = "mycompany.int"
-  }
-
-  description = "Domain to install etcd"
+  type = string
+  default = "mycompany.int"
+  description = "Private, internal domain name to generate for etcd"
 }
 
 variable "key_pair_public_key" {
   description = "Public key for SSH access"
+  default     = ""
 }
 
 variable "cluster_size" {

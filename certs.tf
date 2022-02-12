@@ -35,11 +35,11 @@ resource "tls_private_key" "peer" {
 resource "tls_cert_request" "peer" {
   key_algorithm   = "ECDSA"
   private_key_pem = tls_private_key.peer[count.index].private_key_pem
-  dns_names       = ["peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}", "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"]
+  dns_names       = ["peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}", "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"]
   count           = var.cluster_size
 
   subject {
-    common_name  = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+    common_name  = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
     organization = "Automated via Terraform"
   }
 }
@@ -70,11 +70,11 @@ resource "tls_private_key" "server" {
 resource "tls_cert_request" "server" {
   key_algorithm   = "ECDSA"
   private_key_pem = tls_private_key.server[count.index].private_key_pem
-  dns_names       = ["peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}", "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"]
+  dns_names       = ["peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}", "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"]
   count           = var.cluster_size
 
   subject {
-    common_name  = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+    common_name  = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
     organization = "Automated via Terraform"
   }
 }
@@ -104,7 +104,7 @@ resource "tls_private_key" "client" {
 resource "tls_cert_request" "client" {
   key_algorithm   = "ECDSA"
   private_key_pem = tls_private_key.client.private_key_pem
-  dns_names       = ["${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"]
+  dns_names       = ["${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"]
 
   subject {
     common_name  = "client"

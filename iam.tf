@@ -1,17 +1,18 @@
 resource "aws_key_pair" "default" {
+  count      = var.key_pair_public_key == "" ? 0 : 1
   key_name   = var.role
   public_key = var.key_pair_public_key
 }
 
 resource "aws_iam_policy" "default" {
-  name        = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  name        = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
   path        = "/"
   description = "Allow data volume management for instances"
   policy      = module.attached-ebs.iam_role_policy_document
 }
 
 resource "aws_iam_role" "default" {
-  name  = "${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  name  = "${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
   count = var.cluster_size
 
   assume_role_policy = <<EOF

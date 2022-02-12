@@ -5,7 +5,7 @@ resource "aws_lb" "nlb" {
   internal           = var.nlb_internal
 
   tags = {
-    Name        = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+    Name        = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
     environment = var.environment
     role        = var.role
   }
@@ -38,7 +38,7 @@ resource "aws_lb_target_group" "https" {
 
 resource "aws_route53_record" "nlb" {
   zone_id = aws_route53_zone.default.id
-  name    = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  name    = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
   type    = "A"
 
   alias {

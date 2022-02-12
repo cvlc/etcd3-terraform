@@ -48,9 +48,7 @@ The file `variables.tf` declares the Terraform variables required to run this st
 ```
 module "etcd3-terraform" {
   source = "github.com/ondat/etcd3-terraform"
-  key_pair_public_key = "ssh-rsa..."
-  ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
-  dns = { "domain_name": "mycompany.int" }
+  dns = "mycompany.int"
   
   vpc_id = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -93,7 +91,7 @@ module "etcd3-terraform" {
   source = "github.com/ondat/etcd3-terraform"
   key_pair_public_key = "ssh-rsa..."
   ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
-  dns = { "domain_name": "mycompany.int" }
+  dns = "mycompany.int"
 
   client_cirs = ["10.3.0.0/16"] # k8s cluster
   
@@ -149,7 +147,7 @@ etcd is configured with a 100GB data disk per node on Amazon EBS SSDs by default
 
 For further details of what these values and settings mean, refer to [etcd's official documentation](https://etcd.io/docs/v3.5/op-guide/maintenance/).
 
-When conducting upgrades, be aware that changes to the `cloud-init` configuration do not trigger re-creation of the nodes - this is a conscious decision taken to avoid inadvertedly destroying quorum during an update. Make any necessary changes then use `terraform destroy -target=...` and `terraform apply -target=...` on each ASG/launch-group individually to roll them in series without destroying quorum, checking each time that the new node has rejoined the cluster before deleting the old one. 
+When conducting upgrades or maintenance such as expanding storage, make any necessary changes then use `terraform destroy -target=...` and `terraform apply -target=...` on each ASG/launch-group individually to roll them in series without destroying quorum, checking each time that the new node has rejoined the cluster before deleting the old one. 
 
 ## How to run etcdctl 🔧
 We presume that whatever system you choose to run these commands on can connect to the NLB (ie. if you're using a private subnet, your client machine is within the VPC or connected via a VPN).
@@ -480,6 +478,7 @@ No requirements.
 | [aws_cloudwatch_event_target.lambda-cloudwatch-dns-service-autoscaling](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
 | [aws_cloudwatch_event_target.lambda-cloudwatch-dns-service-ec2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
 | [aws_iam_instance_profile.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile) | resource |
+| [aws_iam_policy.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [aws_iam_role.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role.lambda-cloudwatch-dns-service](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy.lambda-cloudwatch-dns-service](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
@@ -529,13 +528,13 @@ No requirements.
 | <a name="input_associate_public_ips"></a> [associate\_public\_ips](#input\_associate\_public\_ips) | Whether to associate public IPs with etcd instances (suggest false for security) | `string` | `"false"` | no |
 | <a name="input_client_cidrs"></a> [client\_cidrs](#input\_client\_cidrs) | CIDRs to allow client access to etcd | `list` | <pre>[<br>  "10.0.0.0/8"<br>]</pre> | no |
 | <a name="input_cluster_size"></a> [cluster\_size](#input\_cluster\_size) | Number of etcd nodes to launch | `number` | `3` | no |
-| <a name="input_dns"></a> [dns](#input\_dns) | Domain to install etcd | `map(string)` | <pre>{<br>  "domain_name": "mycompany.int"<br>}</pre> | no |
-| <a name="input_environment"></a> [environment](#input\_environment) | Target environment, used to apply tags | `string` | `"development"` | no |
+| <a name="input_dns"></a> [dns](#input\_dns) | Private, internal domain name to generate for etcd | `string` | `"mycompany.int"` | no |
 | <a name="input_ebs_bootstrap_binary_url"></a> [ebs\_bootstrap\_binary\_url](#input\_ebs\_bootstrap\_binary\_url) | Custom URL from which to download the ebs-bootstrap binary | `any` | `null` | no |
+| <a name="input_environment"></a> [environment](#input\_environment) | Target environment, used to apply tags | `string` | `"development"` | no |
 | <a name="input_etcd_url"></a> [etcd\_url](#input\_etcd\_url) | Custom URL from which to download the etcd tgz | `any` | `null` | no |
 | <a name="input_etcd_version"></a> [etcd\_version](#input\_etcd\_version) | etcd version to install | `string` | `"3.5.1"` | no |
 | <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | AWS instance type, at least c5a.large is recommended. etcd suggest m4.large. | `string` | `"c5a.large"` | no |
-| <a name="input_key_pair_public_key"></a> [key\_pair\_public\_key](#input\_key\_pair\_public\_key) | Public key for SSH access | `any` | n/a | yes |
+| <a name="input_key_pair_public_key"></a> [key\_pair\_public\_key](#input\_key\_pair\_public\_key) | Public key for SSH access | `string` | `""` | no |
 | <a name="input_nlb_internal"></a> [nlb\_internal](#input\_nlb\_internal) | 'true' to expose the NLB internally only, 'false' to expose it to the internet | `bool` | `true` | no |
 | <a name="input_restore_snapshot_ids"></a> [restore\_snapshot\_ids](#input\_restore\_snapshot\_ids) | Map of of the snapshots to use to restore etcd data storage - eg. {0: "snap-abcdef", 1: "snap-fedcba", 2: "snap-012345"} | `map(string)` | `{}` | no |
 | <a name="input_role"></a> [role](#input\_role) | Role name used for internal logic | `string` | `"etcd"` | no |
@@ -552,4 +551,3 @@ No requirements.
 | <a name="output_client_cert"></a> [client\_cert](#output\_client\_cert) | Client certificate to use to authenticate with etcd (also see ./client.pem) |
 | <a name="output_client_key"></a> [client\_key](#output\_client\_key) | Client private key to use to authenticate with etcd (also see ./client.key) |
 | <a name="output_lb_address"></a> [lb\_address](#output\_lb\_address) | Load balancer address for use by clients |
-

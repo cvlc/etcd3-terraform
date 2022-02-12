@@ -1,11 +1,11 @@
 resource "aws_launch_configuration" "default" {
   count                       = var.cluster_size
-  name_prefix                 = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}-"
+  name_prefix                 = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}-"
   image_id                    = var.ami != "" ? var.ami : data.aws_ami.ami.id
   instance_type               = var.instance_type
   ebs_optimized               = true
   iam_instance_profile        = aws_iam_instance_profile.default[count.index].id
-  key_name                    = aws_key_pair.default.key_name
+  key_name                    = var.key_pair_public_key == "" ? null : aws_key_pair.default[0].key_name
   enable_monitoring           = false
   associate_public_ip_address = var.associate_public_ips
   security_groups             = [aws_security_group.default.id]
@@ -18,10 +18,10 @@ resource "aws_launch_configuration" "default" {
 
     etcd_member_unit = templatefile("${path.module}/cloudinit/etcd_member_unit", {
       peer_name             = "peer-${count.index}"
-      discovery_domain_name = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+      discovery_domain_name = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
       cluster_name          = var.role
     }),
-    etcd_endpoint                = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+    etcd_endpoint                = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
     ca_file                      = tls_self_signed_cert.ca.cert_pem,
     peer_cert_file               = tls_locally_signed_cert.peer[count.index].cert_pem,
     peer_key_file                = tls_private_key.peer[count.index].private_key_pem,
@@ -33,13 +33,13 @@ resource "aws_launch_configuration" "default" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = [vpc_classic_link_security_groups, user_data]
+    ignore_changes        = [vpc_classic_link_security_groups]
   }
 }
 
 resource "aws_autoscaling_group" "default" {
   count                     = var.cluster_size
-  name                      = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  name                      = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
   max_size                  = 1
   min_size                  = 1
   desired_capacity          = 1
@@ -52,12 +52,12 @@ resource "aws_autoscaling_group" "default" {
   wait_for_capacity_timeout = "0"
   tag {
     key                 = "Name"
-    value               = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+    value               = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
     propagate_at_launch = true
   }
   tag {
     key                 = "Group"
-    value               = "peer.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+    value               = "peer.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
     propagate_at_launch = true
   }
   tag {
@@ -80,7 +80,7 @@ resource "aws_autoscaling_group" "default" {
 
   tag {
     key                 = "r53-domain-name"
-    value               = "${var.environment}.${var.dns["domain_name"]}"
+    value               = "${var.environment}.${var.dns}"
     propagate_at_launch = false
   }
 
@@ -100,11 +100,11 @@ data "aws_subnet" "target" {
 
 module "attached-ebs" {
   source                   = "github.com/ondat/etcd3-bootstrap/terraform/modules/attached_ebs"
-  group                    = "peer.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  group                    = "peer.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
   ebs_bootstrap_binary_url = var.ebs_bootstrap_binary_url
   attached_ebs = {
     for i in range(var.cluster_size) :
-    "data-${i}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}" => {
+    "data-${i}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}" => {
       size                    = var.ssd_size
       availability_zone       = element(data.aws_subnet.target, i)["availability_zone"]
       encrypted               = true
