@@ -3,6 +3,13 @@ resource "aws_key_pair" "default" {
   public_key = var.key_pair_public_key
 }
 
+resource "aws_iam_policy" "default" {
+  name        = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  path        = "/"
+  description = "Allow data volume management for instances"
+  policy      = module.attached-ebs.iam_role_policy_document
+}
+
 resource "aws_iam_role" "default" {
   name  = "${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
   count = var.cluster_size
@@ -32,5 +39,5 @@ resource "aws_iam_instance_profile" "default" {
 resource "aws_iam_role_policy_attachment" "default" {
   count      = var.cluster_size
   role       = aws_iam_role.default[count.index].name
-  policy_arn = module.attached-ebs.iam_role_policy_arn
+  policy_arn = aws_iam_policy.default.arn
 }
