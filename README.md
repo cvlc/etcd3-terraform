@@ -47,10 +47,10 @@ The file `variables.tf` declares the Terraform variables required to run this st
 ### Example (minimal for development env, creates a VPC and all resources in us-east-1)
 ```
 module "etcd3-terraform" {
-  source = "github.com/cvlc/etcd3-terraform"
+  source = "github.com/ondat/etcd3-terraform"
   key_pair_public_key = "ssh-rsa..."
   ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
-  dns = { "domain_name": "mycompany.local" }
+  dns = { "domain_name": "mycompany.int" }
   
   vpc_id = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -86,14 +86,14 @@ module "vpc" {
 
 ### Example ('airgapped' environment, eu-west-2)
 
-Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata and API services from the instance in order to attach the volumes. 
+Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata and API services from the instance in order to attach the volumes. This example will use Debian 10 as an alternative to Ubuntu. 
 
 ```
 module "etcd3-terraform" {
-  source = "github.com/cvlc/etcd3-terraform"
+  source = "github.com/ondat/etcd3-terraform"
   key_pair_public_key = "ssh-rsa..."
   ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
-  dns = { "domain_name": "mycompany.local" }
+  dns = { "domain_name": "mycompany.int" }
 
   client_cirs = ["10.3.0.0/16"] # k8s cluster
   
@@ -109,7 +109,7 @@ module "etcd3-terraform" {
   
   allow_download_from_cidrs = ["10.2.3.5/32"] # HTTPS server for file (certificate must be valid and verifiable) 
   create_s3_bucket = "false"
-  etcd3_bootstrap_binary_url = "https://10.2.3.5/etcd3_bootstrap"
+  ebs_bootstrap_binary_url = "https://10.2.3.5/ebs_bootstrap"
   etcd_url = "https://10.2.3.5/etcd-v3.5.1.tgz"
   ami = "ami-031283ff8a43b021c" # Debian 10
 }
@@ -142,7 +142,7 @@ terraform apply
 ```
 This module requires a private DNS zone. If you use custom DNS servers on your VPC, there are two options - either delegate the etcd subdomain to your VPC from your subdomain or implement [Route53 Resolver](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver.html) to intercept queries for the internal domain and forward requests for it to your VPC DNS servers. 
 
-This module requires outbound internet access in it's default configuration to retrieve etcd binaries and the etcd3-bootstrap utility from S3. The sources for these tools are configurable via variables outlined in the examples - we can provide an https endpoint to retrieve them from in an internal environment. 
+This module requires outbound internet access in it's default configuration to retrieve etcd binaries and the ebs-bootstrap utility from S3. The sources for these tools are configurable via variables outlined in the examples - we can provide an https endpoint to retrieve them from in an internal environment. 
 
 ### Maintenance
 etcd is configured with a 100GB data disk per node on Amazon EBS SSDs by default (configurable via `ssd_size` variable), a `revision` auto compaction mode and a retention of `20000`. An automatic cronjob runs on each node to ensure defragmentation happens at least once every month, this briefly blocks reads/writes on a single node at a time from 3:05am on a different day of the month for each node. It's configured with a backend space quota of `8589934592` bytes. 
@@ -160,9 +160,9 @@ You're now ready to test etcdctl functionality - replace `$insert_nlb_address` w
 
 ```
 $ ETCDCTL_API=3 ETCDCTL_CERT=client.pem ETCDCTL_KEY=client.key ETCDCTL_ENDPOINTS="https://$insert_nlb_address:2379" etcdctl member list
-25f97d08c726ed1, started, peer-2, https://peer-2.etcd.eu-west-2.i.development.mycompany.local:2380, https://peer-2.ondat.eu-west-2.i.development.mycompany.local:2379, false
-326a6d27c048c8ea, started, peer-1, https://peer-1.etcd.eu-west-2.i.development.mycompany.local:2380, https://peer-1.ondat.eu-west-2.i.development.mycompany.local:2379, false
-38308ae09ffc8b32, started, peer-0, https://peer-0.etcd.eu-west-2.i.development.mycompany.local:2380, https://peer-0.ondat.eu-west-2.i.development.mycompany.local:2379, false
+25f97d08c726ed1, started, peer-2, https://peer-2.etcd.eu-west-2.i.development.mycompany.int:2380, https://peer-2.ondat.eu-west-2.i.development.mycompany.int:2379, false
+326a6d27c048c8ea, started, peer-1, https://peer-1.etcd.eu-west-2.i.development.mycompany.int:2380, https://peer-1.ondat.eu-west-2.i.development.mycompany.int:2379, false
+38308ae09ffc8b32, started, peer-0, https://peer-0.etcd.eu-west-2.i.development.mycompany.int:2380, https://peer-0.ondat.eu-west-2.i.development.mycompany.int:2379, false
 ```
 ## How to (synthetically) [benchmark](https://etcd.io/docs/v3.5/op-guide/performance/) etcd in your environment 📊
 
@@ -462,12 +462,13 @@ No requirements.
 |------|---------|
 | <a name="provider_archive"></a> [archive](#provider\_archive) | 2.2.0 |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 3.71.0 |
-| <a name="provider_local"></a> [local](#provider\_local) | 2.1.0 |
 | <a name="provider_tls"></a> [tls](#provider\_tls) | 3.1.0 |
 
 ### Modules
 
-No modules.
+| Name | Source | Version |
+|------|--------|---------|
+| <a name="module_attached-ebs"></a> [attached-ebs](#module\_attached-ebs) | github.com/ondat/etcd3-bootstrap/terraform/modules/attached_ebs | n/a |
 
 ### Resources
 
@@ -478,15 +479,11 @@ No modules.
 | [aws_cloudwatch_event_rule.ec2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_rule) | resource |
 | [aws_cloudwatch_event_target.lambda-cloudwatch-dns-service-autoscaling](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
 | [aws_cloudwatch_event_target.lambda-cloudwatch-dns-service-ec2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
-| [aws_dlm_lifecycle_policy.automatic_snapshots](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dlm_lifecycle_policy) | resource |
-| [aws_ebs_volume.ssd](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ebs_volume) | resource |
 | [aws_iam_instance_profile.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile) | resource |
 | [aws_iam_role.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
-| [aws_iam_role.dlm_lifecycle_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role.lambda-cloudwatch-dns-service](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
-| [aws_iam_role_policy.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
-| [aws_iam_role_policy.dlm_lifecycle](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
 | [aws_iam_role_policy.lambda-cloudwatch-dns-service](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy_attachment.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.lambda-cloudwatch-dns-service-logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.lambda-cloudwatch-dns-service-xray](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_key_pair.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/key_pair) | resource |
@@ -502,13 +499,7 @@ No modules.
 | [aws_route53_record.nlb](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
 | [aws_route53_record.peers](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
 | [aws_route53_zone.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_zone) | resource |
-| [aws_s3_bucket.files](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
-| [aws_s3_bucket_object.etcd3-bootstrap-linux-amd64](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_object) | resource |
-| [aws_s3_bucket_public_access_block.example](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block) | resource |
 | [aws_security_group.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
-| [local_file.ca-cert](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
-| [local_file.client-cert](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
-| [local_file.client-key](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
 | [tls_cert_request.client](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/cert_request) | resource |
 | [tls_cert_request.peer](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/cert_request) | resource |
 | [tls_cert_request.server](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/cert_request) | resource |
@@ -538,10 +529,9 @@ No modules.
 | <a name="input_associate_public_ips"></a> [associate\_public\_ips](#input\_associate\_public\_ips) | Whether to associate public IPs with etcd instances (suggest false for security) | `string` | `"false"` | no |
 | <a name="input_client_cidrs"></a> [client\_cidrs](#input\_client\_cidrs) | CIDRs to allow client access to etcd | `list` | <pre>[<br>  "10.0.0.0/8"<br>]</pre> | no |
 | <a name="input_cluster_size"></a> [cluster\_size](#input\_cluster\_size) | Number of etcd nodes to launch | `number` | `3` | no |
-| <a name="input_create_s3_bucket"></a> [create\_s3\_bucket](#input\_create\_s3\_bucket) | Whether to create the S3 bucket used by default for instances to obtain the etcd3-bootstrap binary through cloud-init | `string` | `"true"` | no |
-| <a name="input_dns"></a> [dns](#input\_dns) | Domain to install etcd | `map(string)` | <pre>{<br>  "domain_name": "mycompany.local"<br>}</pre> | no |
+| <a name="input_dns"></a> [dns](#input\_dns) | Domain to install etcd | `map(string)` | <pre>{<br>  "domain_name": "mycompany.int"<br>}</pre> | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Target environment, used to apply tags | `string` | `"development"` | no |
-| <a name="input_etcd3_bootstrap_binary_url"></a> [etcd3\_bootstrap\_binary\_url](#input\_etcd3\_bootstrap\_binary\_url) | Custom URL from which to download the etcd3-bootstrap binary | `any` | `null` | no |
+| <a name="input_ebs_bootstrap_binary_url"></a> [ebs\_bootstrap\_binary\_url](#input\_ebs\_bootstrap\_binary\_url) | Custom URL from which to download the ebs-bootstrap binary | `any` | `null` | no |
 | <a name="input_etcd_url"></a> [etcd\_url](#input\_etcd\_url) | Custom URL from which to download the etcd tgz | `any` | `null` | no |
 | <a name="input_etcd_version"></a> [etcd\_version](#input\_etcd\_version) | etcd version to install | `string` | `"3.5.1"` | no |
 | <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | AWS instance type, at least c5a.large is recommended. etcd suggest m4.large. | `string` | `"c5a.large"` | no |

@@ -60,14 +60,14 @@ variable "etcd_url" {
   description = "Custom URL from which to download the etcd tgz"
 }
 
-variable "etcd3_bootstrap_binary_url" {
+variable "ebs_bootstrap_binary_url" {
   default     = null
-  description = "Custom URL from which to download the etcd3-bootstrap binary"
+  description = "Custom URL from which to download the ebs-bootstrap binary"
 }
 
 locals {
-  etcd_url_github            = "https://github.com/etcd-io/etcd/releases/download/v${var.etcd_version}/etcd-v${var.etcd_version}-linux-amd64.tar.gz"
-  etcd_url                   = var.etcd_url == null ? local.etcd_url_github : var.etcd_url
+  etcd_url_github = "https://github.com/etcd-io/etcd/releases/download/v${var.etcd_version}/etcd-v${var.etcd_version}-linux-amd64.tar.gz"
+  etcd_url        = var.etcd_url == null ? local.etcd_url_github : var.etcd_url
 }
 
 variable "ami" {
@@ -99,7 +99,7 @@ variable "dns" {
   type = map(string)
 
   default = {
-    domain_name = "mycompany.local"
+    domain_name = "mycompany.int"
   }
 
   description = "Domain to install etcd"

@@ -4,12 +4,12 @@ resource "aws_launch_configuration" "default" {
   image_id                    = var.ami != "" ? var.ami : data.aws_ami.ami.id
   instance_type               = var.instance_type
   ebs_optimized               = true
-  iam_instance_profile        = aws_iam_instance_profile.default.id
+  iam_instance_profile        = aws_iam_instance_profile.default[count.index].id
   key_name                    = aws_key_pair.default.key_name
   enable_monitoring           = false
   associate_public_ip_address = var.associate_public_ips
   security_groups             = [aws_security_group.default.id]
-  user_data = join("\n", [module.asg-attached-ebs[count.index].userdata_snippet, templatefile("${path.module}/cloudinit/userdata-template.sh", {
+  user_data = join("\n", ["#!/bin/bash", module.attached-ebs.userdata_snippets_by_az[data.aws_subnet.target[count.index].availability_zone], templatefile("${path.module}/cloudinit/userdata-template.sh", {
     environment  = var.environment,
     role         = var.role,
     region       = data.aws_region.current.name,
@@ -21,6 +21,7 @@ resource "aws_launch_configuration" "default" {
       discovery_domain_name = "${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
       cluster_name          = var.role
     }),
+    etcd_endpoint                = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
     ca_file                      = tls_self_signed_cert.ca.cert_pem,
     peer_cert_file               = tls_locally_signed_cert.peer[count.index].cert_pem,
     peer_key_file                = tls_private_key.peer[count.index].private_key_pem,
@@ -54,7 +55,11 @@ resource "aws_autoscaling_group" "default" {
     value               = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
     propagate_at_launch = true
   }
-
+  tag {
+    key                 = "Group"
+    value               = "peer.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+    propagate_at_launch = true
+  }
   tag {
     key                 = "environment"
     value               = var.environment
@@ -93,23 +98,23 @@ data "aws_subnet" "target" {
   id     = element(var.subnet_ids, count.index)
 }
 
-module "asg-attached-ebs" {
-  count             = var.cluster_size
-  source            = "./modules/asg_attached_ebs"
-  asg_name          = "peer-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
-  availability_zone = element(data.aws_subnet.target.*.availability_zone, count.index)
+module "attached-ebs" {
+  source                   = "github.com/ondat/etcd3-bootstrap/terraform/modules/attached_ebs"
+  group                    = "peer.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
+  ebs_bootstrap_binary_url = var.ebs_bootstrap_binary_url
   attached_ebs = {
-    "data-${count.index}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}" = {
+    for i in range(var.cluster_size) :
+    "data-${i}.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}" => {
       size                    = var.ssd_size
+      availability_zone       = element(data.aws_subnet.target, i)["availability_zone"]
       encrypted               = true
       volume_type             = "gp3"
-      block_device_aws        = "/dev/xvda1"
-      block_device_os         = "/dev/nvme0n1"
+      block_device_aws        = "/dev/xvdf"
+      block_device_os         = "/dev/nvme1n1"
       block_device_mount_path = "/var/lib/etcd"
       tags = {
-        Name        = "peer-${count.index}-ssd.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns["domain_name"]}"
         environment = var.environment
-        role        = "peer-${count.index}-ssd.${var.role}"
+        role        = "peer-${i}-ssd.${var.role}"
         cluster     = var.role
       }
     }
