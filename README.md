@@ -46,11 +46,8 @@ The file `variables.tf` declares the Terraform variables required to run this st
 
 ### Example (minimal for development env, creates a VPC and all resources in us-east-1)
 ```
-provider "aws" {
-  region = data.aws_region.current.id
-}
+provider "aws" {region = "us-east-1"}
 
-data "aws_region" "current" {}
 data "aws_availability_zones" "available" {}
 
 locals {
@@ -60,9 +57,9 @@ locals {
 
   kubernetes_version = "1.21"
 
-  vpc_cidr     = "10.0.0.0/16"
-  vpc_name     = join("-", [local.tenant, local.environment, local.zone, "vpc"])
-  etcd_name    = join("-", [local.tenant, local.environment, local.zone, "etcd"])
+  vpc_cidr  = "10.0.0.0/16"
+  vpc_name  = join("-", [local.tenant, local.environment, local.zone, "vpc"])
+  etcd_name = join("-", [local.tenant, local.environment, local.zone, "etcd"])
 
   terraform_version = "Terraform v1.1.5"
 }
@@ -99,10 +96,10 @@ module "aws_vpc" {
 
 ### Example ('airgapped' environment, eu-west-2)
 
-Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata and API services from the instance in order to attach the volumes. This example will use Debian 10 as an alternative to Ubuntu. 
+Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata and API services from the instance in order to attach the volumes. This example for the `etcd` module only will use Debian 10 as an alternative to Ubuntu. 
 
 ```
-module "etcd3-terraform" {
+module "etcd" {
   source = "github.com/ondat/etcd3-terraform"
   key_pair_public_key = "ssh-rsa..."
   ssh_cidrs = ["10.2.3.4/32"] # ssh jumpbox
