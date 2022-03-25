@@ -46,39 +46,54 @@ The file `variables.tf` declares the Terraform variables required to run this st
 
 ### Example (minimal for development env, creates a VPC and all resources in us-east-1)
 ```
-module "etcd3-terraform" {
-  source = "github.com/ondat/etcd3-terraform"
-  dns = "mycompany.int"
-  
-  vpc_id = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-
-  ssd_size = 32
-  instance_type = "t3.medium"
+provider "aws" {
+  region = data.aws_region.current.id
 }
 
-module "vpc" {
+data "aws_region" "current" {}
+data "aws_availability_zones" "available" {}
+
+locals {
+  tenant      = "aws001"  # AWS account name or unique id for tenant
+  environment = "preprod" # Environment area eg., preprod or prod
+  zone        = "dev"     # Environment with in one sub_tenant or business unit
+
+  kubernetes_version = "1.21"
+
+  vpc_cidr     = "10.0.0.0/16"
+  vpc_name     = join("-", [local.tenant, local.environment, local.zone, "vpc"])
+  etcd_name    = join("-", [local.tenant, local.environment, local.zone, "etcd"])
+
+  terraform_version = "Terraform v1.1.5"
+}
+
+module "etcd" {
+  source     = "github.com/ondat/etcd3-terraform"
+  vpc_id     = module.aws_vpc.vpc_id
+  subnet_ids = module.aws_vpc.private_subnets
+
+  ssd_size      = 32
+  instance_type = "t3.large"
+
+  client_cidrs = module.aws_vpc.private_subnets_cidr_blocks # etcd access for private nodes
+  dns          = "${local.etcd_name}.int"
+  environment  = "a"
+}
+
+module "aws_vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "3.11.2"
-  name    = "${var.role}-${var.environment}"
-  cidr    = "10.0.0.0/16"
+  version = "v3.2.0"
 
-  azs             = data.aws_availability_zones.available.zone_ids
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  name = local.vpc_name
+  cidr = local.vpc_cidr
+  azs  = data.aws_availability_zones.available.names
 
-  enable_dns_support   = true
+  public_subnets       = [for k, v in slice(data.aws_availability_zones.available.names, 0, 3) : cidrsubnet(local.vpc_cidr, 8, k)]
+  private_subnets      = [for k, v in slice(data.aws_availability_zones.available.names, 0, 3) : cidrsubnet(local.vpc_cidr, 8, k + 10)]
+  enable_nat_gateway   = true
+  create_igw           = true
   enable_dns_hostnames = true
-
-  enable_nat_gateway  = true
-  enable_vpn_gateway  = true
-  single_nat_gateway  = true
-  public_subnet_tags  = merge({ Public = "true" }, var.public_subnet_tags)
-  private_subnet_tags = merge({ Private = "true" }, var.private_subnet_tags)
-  tags = {
-    Terraform   = "true"
-    Environment = var.environment
-  }
+  single_nat_gateway   = true
 }
 ```
 
