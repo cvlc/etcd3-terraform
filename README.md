@@ -94,7 +94,7 @@ module "aws_vpc" {
 }
 ```
 
-### Example ('airgapped' environment, eu-west-2)
+### Example ('airgapped' environment)
 
 Though 'airgapped' in terms of inbound/outbound internet access, this will still rely on access to the AWS metadata and API services from the instance in order to attach the volumes. This example for the `etcd` module only will use Debian 10 as an alternative to Ubuntu. 
 
