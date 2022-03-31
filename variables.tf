@@ -96,8 +96,8 @@ variable "allow_download_from_cidrs" {
 }
 
 variable "dns" {
-  type = string
-  default = "mycompany.int"
+  type        = string
+  default     = "mycompany.int"
   description = "Private, internal domain name to generate for etcd"
 }
 
