@@ -4,11 +4,11 @@ useradd -U -M -s /dev/null etcd
 mkdir -p /etc/ssl/etcd
 chown -R etcd:etcd /etc/ssl/etcd
 chmod -R 700 /etc/ssl/etcd
-curl -L -o /tmp/etcd-v"$etcd_version"-linux-amd64.tar.gz "$etcd_url"
+curl -L -o "/tmp/etcd-v${etcd_version}-linux-amd64.tar.gz" "${etcd_url}"
 
-tar xvf /tmp/etcd-v"$etcd_version"-linux-amd64.tar.gz -C /tmp
+tar xvf "/tmp/etcd-v${etcd_version}-linux-amd64.tar.gz" -C /tmp
 
-mv /tmp/etcd-v"$etcd_version"-linux-amd64/{etcd,etcdctl,etcdutl} /usr/local/bin
+mv "/tmp/etcd-v${etcd_version}-linux-amd64/"{etcd,etcdctl,etcdutl} /usr/local/bin
 
 mkdir -p /var/lib/etcd/
 chown -R etcd:etcd /var/lib/etcd
