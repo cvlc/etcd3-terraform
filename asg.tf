@@ -27,7 +27,9 @@ resource "aws_launch_configuration" "default" {
     peer_key_file                = tls_private_key.peer[count.index].private_key_pem,
     server_cert_file             = tls_locally_signed_cert.server[count.index].cert_pem,
     server_key_file              = tls_private_key.server[count.index].private_key_pem,
-    maintenance_day_of_the_month = count.index < 26 ? count.index + 1 : count.index - 25
+    maintenance_day_of_the_month = count.index < 26 ? count.index + 1 : count.index - 25,
+    aws_region                   = data.aws_region.current.name,
+    aws_dns_server               = cidrhost(data.aws_vpc.target.cidr_block, 2),
   })])
   root_block_device { encrypted = true }
 
