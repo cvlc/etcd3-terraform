@@ -99,7 +99,7 @@ data "aws_subnet" "target" {
 }
 
 module "attached-ebs" {
-  source                   = "github.com/ondat/etcd3-bootstrap//terraform/modules/attached_ebs"
+  source                   = "github.com/ondat/etcd3-bootstrap//terraform/modules/attached_ebs?ref=v0.1.1"
   group                    = "peer.${var.role}.${data.aws_region.current.name}.i.${var.environment}.${var.dns}"
   ebs_bootstrap_binary_url = var.ebs_bootstrap_binary_url
   attached_ebs = {
