@@ -51,7 +51,7 @@ variable "role" {
 }
 
 variable "etcd_version" {
-  default     = "3.5.1"
+  default     = "3.5.3"
   description = "etcd version to install"
 }
 
